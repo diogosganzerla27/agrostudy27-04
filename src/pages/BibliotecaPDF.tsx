@@ -1,19 +1,30 @@
-import { useState } from "react";
-import { FileText, Upload, Search, Filter, Download, Eye, Trash2, Star } from "lucide-react";
+import { useState, useRef } from "react";
+import { FileText, Upload, Search, Filter, Download, Eye, Trash2, Star, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 const BibliotecaPDF = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-
-  const pdfs = [
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [formData, setFormData] = useState({
+    title: "",
+    author: "",
+    discipline: "",
+    tags: ""
+  });
+  const [pdfs, setPdfs] = useState([
     {
       id: 1,
       title: "Manual de Fitotecnia",
@@ -74,9 +85,76 @@ const BibliotecaPDF = () => {
       description: "Manejo nutricional de bovinos em sistemas pastoris",
       tags: ["nutrição", "pastagem", "bovinos"]
     }
-  ];
+  ]);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
 
   const categories = ["all", "Fitotecnia", "Solos", "Agroecologia", "Entomologia", "Zootecnia"];
+
+  const handleFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type === "application/pdf") {
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        toast({
+          title: "Erro",
+          description: "O arquivo deve ter no máximo 10MB",
+          variant: "destructive"
+        });
+        return;
+      }
+      setSelectedFile(file);
+      setFormData(prev => ({ ...prev, title: prev.title || file.name.replace('.pdf', '') }));
+    } else {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione apenas arquivos PDF",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleUpload = () => {
+    if (!selectedFile || !formData.title || !formData.author || !formData.discipline) {
+      toast({
+        title: "Erro",
+        description: "Preencha todos os campos obrigatórios",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const newPdf = {
+      id: Math.max(...pdfs.map(p => p.id), 0) + 1,
+      title: formData.title,
+      author: formData.author,
+      category: formData.discipline,
+      size: `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`,
+      pages: Math.floor(Math.random() * 200) + 50, // Simulated page count
+      uploadDate: new Date().toISOString().split('T')[0],
+      favorite: false,
+      description: `Material de estudo sobre ${formData.discipline.toLowerCase()}`,
+      tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : []
+    };
+
+    setPdfs(prev => [newPdf, ...prev]);
+    
+    // Reset form
+    setSelectedFile(null);
+    setFormData({ title: "", author: "", discipline: "", tags: "" });
+    setUploadDialogOpen(false);
+    
+    toast({
+      title: "Sucesso",
+      description: "PDF enviado com sucesso!"
+    });
+  };
 
   const filteredPDFs = pdfs.filter(pdf => {
     const matchesSearch = pdf.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -99,44 +177,107 @@ const BibliotecaPDF = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      {/* Mobile Menu */}
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <SheetContent side="left" className="p-0 w-64">
+          <Sidebar 
+            activeSection="biblioteca" 
+            onSectionChange={() => setMobileMenuOpen(false)}
+            onClose={() => setMobileMenuOpen(false)}
+          />
+        </SheetContent>
+      </Sheet>
+
+      <Header 
+        onMenuClick={() => setMobileMenuOpen(true)}
+        sidebarOpen={mobileMenuOpen}
+      />
+      
       <div className="flex">
-        <Sidebar activeSection="biblioteca" onSectionChange={() => {}} />
-        <main className="flex-1 p-4 sm:p-6 lg:ml-64">
+        <div className="hidden lg:block">
+          <Sidebar activeSection="biblioteca" onSectionChange={() => {}} />
+        </div>
+        <main className="flex-1 p-3 sm:p-4 lg:p-6 lg:ml-64">
           <div className="space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold flex items-center">
-                  <FileText className="mr-3 h-7 w-7 text-agro-earth" />
-                  Biblioteca PDF
-                </h1>
-                <p className="text-muted-foreground mt-1">Artigos e materiais de estudo</p>
+              <div className="flex items-center gap-4 w-full sm:w-auto">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate(-1)}
+                  className="p-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <div>
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold flex items-center">
+                    <FileText className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7 text-agro-earth" />
+                    Biblioteca PDF
+                  </h1>
+                  <p className="text-sm sm:text-base text-muted-foreground mt-1">Artigos e materiais de estudo</p>
+                </div>
               </div>
               
-              <Dialog>
+              <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="w-full sm:w-auto">
                     <Upload className="mr-2 h-4 w-4" />
                     Upload PDF
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Upload de Arquivo PDF</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
-                    <div className="border-2 border-dashed border-muted rounded-lg p-6 text-center">
-                      <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                      <p className="text-lg font-medium mb-2">Arraste e solte seu PDF aqui</p>
-                      <p className="text-sm text-muted-foreground mb-4">ou clique para selecionar</p>
-                      <Button variant="outline">Selecionar Arquivo</Button>
+                    <div 
+                      className="border-2 border-dashed border-muted rounded-lg p-4 sm:p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                      onClick={handleFileSelect}
+                    >
+                      <Upload className="mx-auto h-8 sm:h-12 w-8 sm:w-12 text-muted-foreground mb-2 sm:mb-4" />
+                      {selectedFile ? (
+                        <div>
+                          <p className="text-sm sm:text-lg font-medium mb-1 sm:mb-2 text-primary">
+                            {selectedFile.name}
+                          </p>
+                          <p className="text-xs sm:text-sm text-muted-foreground">
+                            {(selectedFile.size / (1024 * 1024)).toFixed(1)} MB
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-sm sm:text-lg font-medium mb-1 sm:mb-2">Arraste e solte seu PDF aqui</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-4">ou clique para selecionar</p>
+                          <Button variant="outline" size="sm">Selecionar Arquivo</Button>
+                        </>
+                      )}
                     </div>
-                    <Input placeholder="Título do documento" />
-                    <Input placeholder="Autor" />
-                    <Select>
+                    
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                    
+                    <Input 
+                      placeholder="Título do documento *" 
+                      value={formData.title}
+                      onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                    />
+                    <Input 
+                      placeholder="Autor *" 
+                      value={formData.author}
+                      onChange={(e) => setFormData(prev => ({ ...prev, author: e.target.value }))}
+                    />
+                    <Select 
+                      value={formData.discipline} 
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, discipline: value }))}
+                    >
                       <SelectTrigger>
-                        <SelectValue placeholder="Categoria" />
+                        <SelectValue placeholder="Disciplina *" />
                       </SelectTrigger>
                       <SelectContent>
                         {categories.slice(1).map(category => (
@@ -144,8 +285,18 @@ const BibliotecaPDF = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                    <Input placeholder="Tags (separadas por vírgula)" />
-                    <Button className="w-full">Fazer Upload</Button>
+                    <Input 
+                      placeholder="Tags (separadas por vírgula)" 
+                      value={formData.tags}
+                      onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
+                    />
+                    <Button 
+                      className="w-full" 
+                      onClick={handleUpload}
+                      disabled={!selectedFile || !formData.title || !formData.author || !formData.discipline}
+                    >
+                      Fazer Upload
+                    </Button>
                   </div>
                 </DialogContent>
               </Dialog>
