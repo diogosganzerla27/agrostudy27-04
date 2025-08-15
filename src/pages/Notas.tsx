@@ -247,43 +247,44 @@ const Notas = () => {
         </SheetContent>
       </Sheet>
 
-      <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate(-1)}
-              className="hover:bg-agro-green/10"
+              className="hover:bg-agro-green/10 flex-shrink-0"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-foreground">Desempenho Acadêmico</h1>
-              <p className="text-muted-foreground">Acompanhe suas notas e médias por disciplina</p>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Desempenho Acadêmico</h1>
+              <p className="text-sm sm:text-base text-muted-foreground">Acompanhe suas notas e médias por disciplina</p>
             </div>
             <Dialog open={isNewNotaOpen} onOpenChange={setIsNewNotaOpen}>
               <DialogTrigger asChild>
-                <Button onClick={resetForm} className="bg-agro-green hover:bg-agro-green-light">
+                <Button onClick={resetForm} className="bg-agro-green hover:bg-agro-green-light w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
-                  Registrar Nota
+                  <span className="sm:hidden">Registrar</span>
+                  <span className="hidden sm:inline">Registrar Nota</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-3 sm:mx-auto">
                 <DialogHeader>
-                  <DialogTitle>
+                  <DialogTitle className="text-lg sm:text-xl">
                     {editingNota ? "Editar Nota" : "Registrar Nova Nota"}
                   </DialogTitle>
                 </DialogHeader>
                 
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                   {/* Form Fields */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-4">
                     <div>
-                      <Label htmlFor="disciplina">Disciplina *</Label>
+                      <Label htmlFor="disciplina" className="text-sm font-medium">Disciplina *</Label>
                       <Select value={disciplina} onValueChange={setDisciplina}>
-                        <SelectTrigger>
+                        <SelectTrigger className="mt-1">
                           <SelectValue placeholder="Selecione a disciplina" />
                         </SelectTrigger>
                         <SelectContent>
@@ -294,9 +295,9 @@ const Notas = () => {
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="tipoAvaliacao">Tipo de Avaliação *</Label>
+                      <Label htmlFor="tipoAvaliacao" className="text-sm font-medium">Tipo de Avaliação *</Label>
                       <Select value={tipoAvaliacao} onValueChange={(value: any) => setTipoAvaliacao(value)}>
-                        <SelectTrigger>
+                        <SelectTrigger className="mt-1">
                           <SelectValue placeholder="Selecione o tipo" />
                         </SelectTrigger>
                         <SelectContent>
@@ -309,18 +310,19 @@ const Notas = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="descricao">Descrição *</Label>
+                    <Label htmlFor="descricao" className="text-sm font-medium">Descrição *</Label>
                     <Input
                       id="descricao"
                       value={descricao}
                       onChange={(e) => setDescricao(e.target.value)}
-                      placeholder="Ex: P1 - Primeira Prova, Trabalho Final, etc."
+                      placeholder="Ex: P1 - Primeira Prova"
+                      className="mt-1"
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:space-y-0">
                     <div>
-                      <Label htmlFor="nota">Nota (0-10) *</Label>
+                      <Label htmlFor="nota" className="text-sm font-medium">Nota (0-10) *</Label>
                       <Input
                         id="nota"
                         type="number"
@@ -330,10 +332,11 @@ const Notas = () => {
                         value={nota}
                         onChange={(e) => setNota(e.target.value)}
                         placeholder="8.5"
+                        className="mt-1"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="pesoNota">Peso da Nota *</Label>
+                      <Label htmlFor="pesoNota" className="text-sm font-medium">Peso *</Label>
                       <Input
                         id="pesoNota"
                         type="number"
@@ -342,31 +345,34 @@ const Notas = () => {
                         value={pesoNota}
                         onChange={(e) => setPesoNota(e.target.value)}
                         placeholder="2.0"
+                        className="mt-1"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="dataAvaliacao">Data da Avaliação *</Label>
+                      <Label htmlFor="dataAvaliacao" className="text-sm font-medium">Data *</Label>
                       <Input
                         id="dataAvaliacao"
                         type="date"
                         value={dataAvaliacao}
                         onChange={(e) => setDataAvaliacao(e.target.value)}
+                        className="mt-1"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <Label htmlFor="observacoes">Observações</Label>
+                    <Label htmlFor="observacoes" className="text-sm font-medium">Observações</Label>
                     <Input
                       id="observacoes"
                       value={observacoes}
                       onChange={(e) => setObservacoes(e.target.value)}
-                      placeholder="Comentários adicionais sobre a avaliação"
+                      placeholder="Comentários adicionais"
+                      className="mt-1"
                     />
                   </div>
                 </div>
 
-                <DialogFooter className="gap-2">
+                <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-2">
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -374,11 +380,12 @@ const Notas = () => {
                       setEditingNota(null);
                       resetForm();
                     }}
+                    className="w-full sm:w-auto order-2 sm:order-1"
                   >
                     Cancelar
                   </Button>
-                  <Button onClick={handleSaveNota} className="bg-agro-green hover:bg-agro-green-light">
-                    {editingNota ? "Salvar Alterações" : "Registrar Nota"}
+                  <Button onClick={handleSaveNota} className="bg-agro-green hover:bg-agro-green-light w-full sm:w-auto order-1 sm:order-2">
+                    {editingNota ? "Salvar" : "Registrar"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -386,47 +393,47 @@ const Notas = () => {
           </div>
 
           {/* Dashboard com Estatísticas */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
             <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <Calculator className="h-8 w-8 text-agro-green" />
-                  <div>
-                    <p className="text-2xl font-bold">{estatisticas.mediaGeral.toFixed(1)}</p>
-                    <p className="text-sm text-muted-foreground">Média Geral</p>
+              <CardContent className="pt-4 sm:pt-6">
+                <div className="flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-3">
+                  <Calculator className="h-6 w-6 sm:h-8 sm:w-8 text-agro-green flex-shrink-0" />
+                  <div className="text-center sm:text-left">
+                    <p className="text-lg sm:text-2xl font-bold">{estatisticas.mediaGeral.toFixed(1)}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Média Geral</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <BookOpen className="h-8 w-8 text-agro-sky" />
-                  <div>
-                    <p className="text-2xl font-bold">{estatisticas.totalDisciplinas}</p>
-                    <p className="text-sm text-muted-foreground">Disciplinas</p>
+              <CardContent className="pt-4 sm:pt-6">
+                <div className="flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-3">
+                  <BookOpen className="h-6 w-6 sm:h-8 sm:w-8 text-agro-sky flex-shrink-0" />
+                  <div className="text-center sm:text-left">
+                    <p className="text-lg sm:text-2xl font-bold">{estatisticas.totalDisciplinas}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Disciplinas</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <ClipboardCheck className="h-8 w-8 text-agro-earth" />
-                  <div>
-                    <p className="text-2xl font-bold">{estatisticas.totalNotas}</p>
-                    <p className="text-sm text-muted-foreground">Avaliações</p>
+              <CardContent className="pt-4 sm:pt-6">
+                <div className="flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-3">
+                  <ClipboardCheck className="h-6 w-6 sm:h-8 sm:w-8 text-agro-earth flex-shrink-0" />
+                  <div className="text-center sm:text-left">
+                    <p className="text-lg sm:text-2xl font-bold">{estatisticas.totalNotas}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Avaliações</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <Trophy className="h-8 w-8 text-accent" />
-                  <div>
-                    <p className="text-2xl font-bold">{estatisticas.percentualAprovacao}%</p>
-                    <p className="text-sm text-muted-foreground">Aprovação</p>
+              <CardContent className="pt-4 sm:pt-6">
+                <div className="flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-3">
+                  <Trophy className="h-6 w-6 sm:h-8 sm:w-8 text-accent flex-shrink-0" />
+                  <div className="text-center sm:text-left">
+                    <p className="text-lg sm:text-2xl font-bold">{estatisticas.percentualAprovacao}%</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Aprovação</p>
                   </div>
                 </div>
               </CardContent>
@@ -435,9 +442,9 @@ const Notas = () => {
         </div>
 
         {/* Filters */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+        <Card className="mb-4 sm:mb-6">
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="space-y-3 sm:flex sm:flex-row sm:gap-4 sm:items-center sm:space-y-0">
               <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -466,16 +473,16 @@ const Notas = () => {
 
         {/* Disciplinas Grid */}
         {filteredDisciplinas.length === 0 ? (
-          <Card className="text-center py-12">
+          <Card className="text-center py-8 sm:py-12">
             <CardContent>
-              <GraduationCap className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Nenhuma nota registrada</h3>
-              <p className="text-muted-foreground mb-4">
+              <GraduationCap className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+              <h3 className="text-base sm:text-lg font-medium mb-2">Nenhuma nota registrada</h3>
+              <p className="text-sm sm:text-base text-muted-foreground mb-4 px-4">
                 Comece registrando suas primeiras notas para acompanhar seu desempenho.
               </p>
               <Button 
                 onClick={() => setIsNewNotaOpen(true)}
-                className="bg-agro-green hover:bg-agro-green-light"
+                className="bg-agro-green hover:bg-agro-green-light w-full sm:w-auto"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Registrar Primeira Nota
@@ -483,16 +490,16 @@ const Notas = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {filteredDisciplinas.map((disciplina) => (
               <Card key={disciplina.nome} className="overflow-hidden">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-xl mb-2">{disciplina.nome}</CardTitle>
-                      <div className="flex items-center gap-4">
+                <CardHeader className="pb-3 sm:pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg sm:text-xl mb-2 truncate">{disciplina.nome}</CardTitle>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                         <div className="flex items-center gap-2">
-                          <span className="text-2xl font-bold text-foreground">
+                          <span className="text-xl sm:text-2xl font-bold text-foreground">
                             {disciplina.media.toFixed(1)}
                           </span>
                           <Badge 
@@ -510,46 +517,46 @@ const Notas = () => {
                             {disciplina.status}
                           </Badge>
                         </div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-xs sm:text-sm text-muted-foreground">
                           {disciplina.totalAvaliacoes} avaliação{disciplina.totalAvaliacoes !== 1 ? 'ões' : ''}
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex-shrink-0">
                       <Progress 
                         value={Math.min(disciplina.media * 10, 100)} 
-                        className="w-24 h-2 mb-2"
+                        className="w-20 sm:w-24 h-2 mb-1 sm:mb-2"
                       />
                       <div className="text-xs text-muted-foreground">
-                        Progresso: {Math.min(disciplina.media * 10, 100).toFixed(0)}%
+                        {Math.min(disciplina.media * 10, 100).toFixed(0)}%
                       </div>
                     </div>
                   </div>
                 </CardHeader>
                 
-                <CardContent>
-                  <div className="space-y-3">
+                <CardContent className="pt-0">
+                  <div className="space-y-2 sm:space-y-3">
                     {disciplina.notas.map((nota) => (
-                      <div key={nota.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="outline" className="text-xs">
+                      <div key={nota.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-muted/30 rounded-lg gap-3 sm:gap-0">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <Badge variant="outline" className="text-xs flex-shrink-0">
                               {nota.tipoAvaliacao}
                             </Badge>
-                            <span className="font-medium">{nota.descricao}</span>
+                            <span className="font-medium text-sm sm:text-base truncate">{nota.descricao}</span>
                           </div>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1 flex-shrink-0">
                               <Calendar className="h-3 w-3" />
                               {nota.dataAvaliacao.toLocaleDateString()}
                             </span>
-                            <span>Peso: {nota.pesoNota}</span>
+                            <span className="flex-shrink-0">Peso: {nota.pesoNota}</span>
                             {nota.observacoes && (
-                              <span className="truncate max-w-40">{nota.observacoes}</span>
+                              <span className="truncate max-w-32 sm:max-w-40">{nota.observacoes}</span>
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-between sm:justify-end gap-3">
                           <div className="text-right">
                             <div className="text-lg font-bold">{nota.nota.toFixed(1)}</div>
                             <div className="text-xs text-muted-foreground">/ 10</div>
