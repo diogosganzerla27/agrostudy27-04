@@ -9,6 +9,8 @@ import CadernoDigital from "./pages/CadernoDigital";
 import AgendaAcademica from "./pages/AgendaAcademica";
 import VisitasTecnicas from "./pages/VisitasTecnicas";
 import BibliotecaPDF from "./pages/BibliotecaPDF";
+import Upload from "./pages/Upload";
+import Notas from "./pages/Notas";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +26,8 @@ const App = () => (
           <Route path="/agenda" element={<AgendaAcademica />} />
           <Route path="/visitas" element={<VisitasTecnicas />} />
           <Route path="/biblioteca" element={<BibliotecaPDF />} />
+          <Route path="/upload" element={<Upload />} />
+          <Route path="/notas" element={<Notas />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
