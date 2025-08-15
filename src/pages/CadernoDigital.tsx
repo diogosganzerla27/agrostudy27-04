@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookOpen, Plus, Search, Filter, Tag, Paperclip, ArrowLeft } from "lucide-react";
+import { BookOpen, Plus, Search, Filter, Tag, Paperclip, ArrowLeft, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,10 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Header } from "@/components/layout/Header";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { ViewNoteDialog } from "@/components/caderno/ViewNoteDialog";
+import { FileUpload } from "@/components/caderno/FileUpload";
+import { useToast } from "@/hooks/use-toast";
 const CadernoDigital = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDiscipline, setSelectedDiscipline] = useState("all");
   
@@ -24,36 +26,48 @@ const CadernoDigital = () => {
     tags: "",
     files: [] as File[]
   });
+
+  // Estados para visualização de anotação
+  const [selectedNote, setSelectedNote] = useState<any>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [notes, setNotes] = useState([{
     id: 1,
     title: "Irrigação por Gotejamento",
     discipline: "Solos",
-    content: "Técnica de irrigação localizada que permite aplicação de água diretamente na zona radicular...",
+    content: "Técnica de irrigação localizada que permite aplicação de água diretamente na zona radicular das plantas, proporcionando maior eficiência no uso da água e redução de perdas por evaporação. Esta técnica é fundamental para a agricultura sustentável em regiões áridas e semi-áridas.",
     tags: ["irrigação", "economia-água", "sustentabilidade"],
     date: "2024-11-15",
-    color: "bg-agro-earth"
+    color: "bg-agro-earth",
+    files: []
   }, {
     id: 2,
     title: "Controle Biológico de Pragas",
     discipline: "Fitotecnia",
-    content: "Uso de organismos vivos para controlar populações de pragas de forma natural...",
+    content: "Uso de organismos vivos para controlar populações de pragas de forma natural e sustentável. Inclui o uso de predadores, parasitoides, patógenos e outros agentes biológicos que reduzem a necessidade de pesticidas químicos.",
     tags: ["controle-biológico", "pragas", "sustentável"],
     date: "2024-11-14",
-    color: "bg-agro-green"
+    color: "bg-agro-green",
+    files: []
   }, {
     id: 3,
     title: "Princípios da Agroecologia",
     discipline: "Agroecologia",
-    content: "Sistema agrícola que integra aspectos ecológicos, econômicos e sociais...",
+    content: "Sistema agrícola que integra aspectos ecológicos, econômicos e sociais para criar sistemas alimentares sustentáveis. Baseia-se na biodiversidade, reciclagem de nutrientes e sinergias entre diferentes componentes do agroecossistema.",
     tags: ["agroecologia", "sustentabilidade", "biodiversidade"],
     date: "2024-11-13",
-    color: "bg-agro-field"
+    color: "bg-agro-field",
+    files: []
   }]);
   
   // Função para salvar nova anotação
   const handleSaveNote = () => {
     if (!newNote.title.trim() || !newNote.discipline || !newNote.content.trim()) {
-      return; // Validação básica
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha o título, disciplina e conteúdo",
+        variant: "destructive",
+      });
+      return;
     }
     
     const note = {
@@ -63,7 +77,8 @@ const CadernoDigital = () => {
       content: newNote.content,
       tags: newNote.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
       date: new Date().toISOString().split('T')[0],
-      color: "bg-agro-green" // Cor padrão para novas anotações
+      color: "bg-agro-green", // Cor padrão para novas anotações
+      files: [...newNote.files] // Incluir arquivos
     };
     
     setNotes([note, ...notes]);
@@ -78,6 +93,22 @@ const CadernoDigital = () => {
     });
     
     setIsDialogOpen(false);
+    
+    toast({
+      title: "Anotação salva",
+      description: "Sua anotação foi salva com sucesso",
+    });
+  };
+
+  // Função para abrir anotação
+  const handleViewNote = (note: any) => {
+    setSelectedNote(note);
+    setIsViewDialogOpen(true);
+  };
+
+  // Função para voltar
+  const handleGoBack = () => {
+    navigate('/');
   };
   const disciplines = ["all", "Solos", "Fitotecnia", "Agroecologia", "Entomologia", "Zootecnia"];
   const filteredNotes = notes.filter(note => {
@@ -94,7 +125,7 @@ const CadernoDigital = () => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                onClick={() => navigate(-1)}
+                onClick={handleGoBack}
                 className="hover:bg-muted"
               >
                 <ArrowLeft className="h-5 w-5" />
@@ -160,21 +191,10 @@ const CadernoDigital = () => {
                       onChange={(e) => setNewNote({...newNote, tags: e.target.value})}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium flex items-center">
-                      <Paperclip className="mr-2 h-4 w-4" />
-                      Anexar Arquivos
-                    </label>
-                    <Input 
-                      type="file" 
-                      multiple 
-                      accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
-                      className="h-11 sm:h-10 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-muted file:text-muted-foreground hover:file:bg-muted/80" 
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Formatos aceitos: PDF, DOC, DOCX, TXT, JPG, PNG (máx. 10MB cada)
-                    </p>
-                  </div>
+                  <FileUpload 
+                    files={newNote.files}
+                    onFilesChange={(files) => setNewNote({...newNote, files})}
+                  />
                 </div>
               </div>
               <div className="pt-4 border-t">
@@ -210,11 +230,24 @@ const CadernoDigital = () => {
 
         {/* Notes Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredNotes.map(note => <Card key={note.id} className="hover:shadow-md transition-all cursor-pointer touch-manipulation">
+          {filteredNotes.map(note => (
+            <Card 
+              key={note.id} 
+              className="hover:shadow-md transition-all cursor-pointer touch-manipulation"
+              onClick={() => handleViewNote(note)}
+            >
               <CardHeader className="pb-3 p-4 sm:p-6">
                 <div className="flex items-start justify-between gap-3">
                   <CardTitle className="text-base sm:text-lg leading-tight flex-1 min-w-0">{note.title}</CardTitle>
-                  <div className={`w-4 h-4 sm:w-3 sm:h-3 rounded-full ${note.color} flex-shrink-0 mt-1`}></div>
+                  <div className="flex items-center gap-2">
+                    {note.files && note.files.length > 0 && (
+                      <div className="flex items-center bg-muted rounded-full px-2 py-1">
+                        <FileText className="h-3 w-3 mr-1" />
+                        <span className="text-xs">{note.files.length}</span>
+                      </div>
+                    )}
+                    <div className={`w-4 h-4 sm:w-3 sm:h-3 rounded-full ${note.color} flex-shrink-0`}></div>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between flex-wrap gap-2 mt-2">
                   <Badge variant="secondary" className="text-xs px-2 py-1">{note.discipline}</Badge>
@@ -224,14 +257,24 @@ const CadernoDigital = () => {
               <CardContent className="p-4 sm:p-6 pt-0">
                 <p className="text-sm text-muted-foreground mb-3 line-clamp-3 leading-relaxed">{note.content}</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {note.tags.map(tag => <Badge key={tag} variant="outline" className="text-xs px-2 py-1 rounded-full">
+                  {note.tags.map(tag => (
+                    <Badge key={tag} variant="outline" className="text-xs px-2 py-1 rounded-full">
                       <Tag className="mr-1 h-3 w-3" />
                       {tag}
-                    </Badge>)}
+                    </Badge>
+                  ))}
                 </div>
               </CardContent>
-            </Card>)}
+            </Card>
+          ))}
         </div>
+
+        {/* View Note Dialog */}
+        <ViewNoteDialog 
+          note={selectedNote}
+          open={isViewDialogOpen}
+          onOpenChange={setIsViewDialogOpen}
+        />
 
         {filteredNotes.length === 0 && <div className="text-center py-12 px-4">
             <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
