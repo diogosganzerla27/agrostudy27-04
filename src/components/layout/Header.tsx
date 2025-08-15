@@ -8,35 +8,26 @@ interface HeaderProps {
   onMenuClick?: () => void;
   sidebarOpen?: boolean;
 }
-export const Header = ({ onMenuClick, sidebarOpen }: HeaderProps) => {
-  const { user, signOut } = useAuth();
-
+export const Header = ({
+  onMenuClick,
+  sidebarOpen
+}: HeaderProps) => {
+  const {
+    user,
+    signOut
+  } = useAuth();
   const getUserInitials = () => {
     if (user?.user_metadata?.name) {
-      return user.user_metadata.name
-        .split(' ')
-        .map((n: string) => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
+      return user.user_metadata.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
     }
     return user?.email?.slice(0, 2).toUpperCase() || 'U';
   };
-
-  return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+  return <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-4">
-          {onMenuClick && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={onMenuClick}
-            >
+          {onMenuClick && <Button variant="ghost" size="icon" className="md:hidden" onClick={onMenuClick}>
               <Menu className="h-5 w-5" />
-            </Button>
-          )}
+            </Button>}
           
           <div className="flex items-center space-x-2">
             <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
@@ -49,10 +40,7 @@ export const Header = ({ onMenuClick, sidebarOpen }: HeaderProps) => {
         <div className="hidden md:flex flex-1 max-w-sm mx-4">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Buscar..."
-              className="pl-10"
-            />
+            <Input placeholder="Buscar..." className="pl-10" />
           </div>
         </div>
 
@@ -61,9 +49,7 @@ export const Header = ({ onMenuClick, sidebarOpen }: HeaderProps) => {
             <Search className="h-5 w-5" />
           </Button>
           
-          <Button variant="ghost" size="icon">
-            <Settings className="h-5 w-5" />
-          </Button>
+          
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -93,8 +79,6 @@ export const Header = ({ onMenuClick, sidebarOpen }: HeaderProps) => {
           </DropdownMenu>
         </div>
       </div>
-    </header>
-  );
+    </header>;
 };
-
 export default Header;
