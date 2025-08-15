@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Header } from "@/components/layout/Header";
@@ -18,6 +19,9 @@ const BibliotecaPDF = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [viewPdfDialogOpen, setViewPdfDialogOpen] = useState(false);
+  const [viewingPdf, setViewingPdf] = useState<any>(null);
+  const [deletePdfId, setDeletePdfId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     author: "",
@@ -154,6 +158,56 @@ const BibliotecaPDF = () => {
       title: "Sucesso",
       description: "PDF enviado com sucesso!"
     });
+  };
+
+  const handleViewPdf = (pdf: any) => {
+    setViewingPdf(pdf);
+    setViewPdfDialogOpen(true);
+  };
+
+  const handleDownloadPdf = (pdf: any) => {
+    // Simulate PDF download
+    const element = document.createElement("a");
+    const file = new Blob(
+      ["This is a simulated PDF content for: " + pdf.title],
+      { type: "application/pdf" }
+    );
+    element.href = URL.createObjectURL(file);
+    element.download = `${pdf.title}.pdf`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+    
+    toast({
+      title: "Download iniciado",
+      description: `${pdf.title} está sendo baixado`
+    });
+  };
+
+  const handleDeletePdf = (pdfId: number) => {
+    setPdfs(prev => prev.filter(pdf => pdf.id !== pdfId));
+    setDeletePdfId(null);
+    
+    toast({
+      title: "PDF removido",
+      description: "O arquivo foi removido da biblioteca"
+    });
+  };
+
+  const handleToggleFavorite = (pdfId: number) => {
+    setPdfs(prev => prev.map(pdf => 
+      pdf.id === pdfId 
+        ? { ...pdf, favorite: !pdf.favorite }
+        : pdf
+    ));
+    
+    const pdf = pdfs.find(p => p.id === pdfId);
+    if (pdf) {
+      toast({
+        title: pdf.favorite ? "Removido dos favoritos" : "Adicionado aos favoritos",
+        description: pdf.title
+      });
+    }
   };
 
   const filteredPDFs = pdfs.filter(pdf => {
@@ -392,6 +446,7 @@ const BibliotecaPDF = () => {
                         variant="ghost"
                         size="sm"
                         className={`p-1 ${pdf.favorite ? 'text-yellow-500' : 'text-muted-foreground'}`}
+                        onClick={() => handleToggleFavorite(pdf.id)}
                       >
                         <Star className="h-4 w-4" fill={pdf.favorite ? 'currentColor' : 'none'} />
                       </Button>
@@ -427,17 +482,48 @@ const BibliotecaPDF = () => {
                       </div>
                       
                       <div className="flex space-x-2">
-                        <Button variant="outline" size="sm" className="flex-1">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => handleViewPdf(pdf)}
+                        >
                           <Eye className="mr-1 h-3 w-3" />
                           Ver
                         </Button>
-                        <Button variant="outline" size="sm" className="flex-1">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => handleDownloadPdf(pdf)}
+                        >
                           <Download className="mr-1 h-3 w-3" />
                           Baixar
                         </Button>
-                        <Button variant="outline" size="sm">
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja excluir "{pdf.title}"? Esta ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDeletePdf(pdf.id)}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                   </CardContent>
@@ -449,12 +535,96 @@ const BibliotecaPDF = () => {
               <div className="text-center py-12">
                 <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium mb-2">Nenhum PDF encontrado</h3>
-                <p className="text-muted-foreground">Faça upload de seus primeiros materiais ou ajuste os filtros</p>
+                <p className="text-muted-foreground">
+                  {searchTerm || selectedCategory !== "all" 
+                    ? "Tente ajustar seus filtros de busca" 
+                    : "Comece enviando seu primeiro PDF"
+                  }
+                </p>
               </div>
             )}
           </div>
         </main>
       </div>
+
+      {/* PDF Viewer Modal */}
+      <Dialog open={viewPdfDialogOpen} onOpenChange={setViewPdfDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-red-500" />
+              {viewingPdf?.title}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-6 pt-4">
+            {viewingPdf && (
+              <div className="space-y-4">
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="font-medium text-muted-foreground">Autor</p>
+                      <p>{viewingPdf.author}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-muted-foreground">Disciplina</p>
+                      <p>{viewingPdf.category}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-muted-foreground">Páginas</p>
+                      <p>{viewingPdf.pages} páginas</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-muted-foreground">Tamanho</p>
+                      <p>{viewingPdf.size}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <p className="font-medium text-muted-foreground mb-2">Descrição</p>
+                    <p className="text-sm">{viewingPdf.description}</p>
+                  </div>
+                  {viewingPdf.tags && viewingPdf.tags.length > 0 && (
+                    <div className="mt-4">
+                      <p className="font-medium text-muted-foreground mb-2">Tags</p>
+                      <div className="flex flex-wrap gap-1">
+                        {viewingPdf.tags.map((tag: string) => (
+                          <Badge key={tag} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="bg-gray-100 rounded-lg p-8 text-center">
+                  <FileText className="mx-auto h-16 w-16 text-red-500 mb-4" />
+                  <p className="text-lg font-medium mb-2">Visualização do PDF</p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Em um ambiente real, o PDF seria exibido aqui usando um visualizador integrado.
+                  </p>
+                  <div className="flex justify-center gap-2">
+                    <Button 
+                      onClick={() => handleDownloadPdf(viewingPdf)}
+                      variant="outline"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Baixar PDF
+                    </Button>
+                    <Button 
+                      onClick={() => handleToggleFavorite(viewingPdf.id)}
+                      variant="outline"
+                      className={viewingPdf.favorite ? 'text-yellow-500' : ''}
+                    >
+                      <Star className="h-4 w-4 mr-2" fill={viewingPdf.favorite ? 'currentColor' : 'none'} />
+                      {viewingPdf.favorite ? 'Remover favorito' : 'Favoritar'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
