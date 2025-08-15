@@ -11,6 +11,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, name: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   isNewUser: boolean;
+  markSetupComplete: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -129,6 +130,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  const markSetupComplete = () => {
+    setIsNewUser(false);
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -137,7 +142,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       signIn,
       signUp,
       signOut,
-      isNewUser
+      isNewUser,
+      markSetupComplete
     }}>
       {children}
     </AuthContext.Provider>

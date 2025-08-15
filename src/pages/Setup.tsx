@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 
 const Setup = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, markSetupComplete } = useAuth();
   const { createSemester, createSubject } = useSubjects();
   const { toast } = useToast();
   
@@ -114,6 +114,8 @@ const Setup = () => {
         description: "Sua conta foi configurada com sucesso",
       });
 
+      // Mark setup as complete to prevent redirect loop
+      markSetupComplete();
       navigate('/');
     } catch (error) {
       console.error('Setup error:', error);
