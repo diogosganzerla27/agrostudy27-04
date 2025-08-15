@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   GraduationCap, 
@@ -29,31 +29,20 @@ import { Header } from "@/components/layout/Header";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Progress } from "@/components/ui/progress";
+import { useSubjects } from "@/hooks/useSubjects";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
-interface NotaAcademica {
+interface Grade {
   id: string;
-  disciplina: string;
-  tipoAvaliacao: 'Prova' | 'Trabalho' | 'Seminário' | 'Projeto' | 'Participação' | 'Outro';
-  descricao: string;
-  nota: number;
-  pesoNota: number;
-  dataAvaliacao: Date;
-  observacoes?: string;
-  status: 'Aprovado' | 'Reprovado' | 'Pendente';
+  subject_id: string;
+  assessment_type: string;
+  title: string;
+  grade: number;
+  weight: number;
+  date: string;
+  user_id: string;
 }
-
-const disciplinas = [
-  "Agronomia",
-  "Zootecnia", 
-  "Engenharia Florestal",
-  "Biotecnologia",
-  "Solos",
-  "Fitotecnia",
-  "Entomologia",
-  "Fitopatologia",
-  "Economia Rural",
-  "Extensão Rural"
-];
 
 const tiposAvaliacao = [
   'Prova',
@@ -67,39 +56,73 @@ const tiposAvaliacao = [
 const Notas = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { subjects, loading: subjectsLoading } = useSubjects();
   
-  const [notasAcademicas, setNotasAcademicas] = useState<NotaAcademica[]>([]);
+  const [grades, setGrades] = useState<Grade[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedDiscipline, setSelectedDiscipline] = useState<string>("all");
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>("all");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isNewNotaOpen, setIsNewNotaOpen] = useState(false);
-  const [editingNota, setEditingNota] = useState<NotaAcademica | null>(null);
+  const [editingGrade, setEditingGrade] = useState<Grade | null>(null);
   
   // Form states
-  const [disciplina, setDisciplina] = useState("");
+  const [subjectId, setSubjectId] = useState("");
   const [tipoAvaliacao, setTipoAvaliacao] = useState<'Prova' | 'Trabalho' | 'Seminário' | 'Projeto' | 'Participação' | 'Outro'>('Prova');
-  const [descricao, setDescricao] = useState("");
+  const [title, setTitle] = useState("");
   const [nota, setNota] = useState("");
   const [pesoNota, setPesoNota] = useState("");
   const [dataAvaliacao, setDataAvaliacao] = useState("");
-  const [observacoes, setObservacoes] = useState("");
+
+  // Load grades from Supabase
+  useEffect(() => {
+    if (user) {
+      loadGrades();
+    }
+  }, [user]);
+
+  const loadGrades = async () => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('grades')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+
+      setGrades(data || []);
+    } catch (error) {
+      console.error('Error loading grades:', error);
+      toast({
+        title: "Erro ao carregar notas",
+        description: "Não foi possível carregar suas notas",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleMenuClick = () => {
     setMobileMenuOpen(true);
   };
 
   const resetForm = () => {
-    setDisciplina("");
+    setSubjectId("");
     setTipoAvaliacao('Prova');
-    setDescricao("");
+    setTitle("");
     setNota("");
     setPesoNota("");
     setDataAvaliacao("");
-    setObservacoes("");
   };
 
-  const handleSaveNota = () => {
-    if (!disciplina || !descricao.trim() || !nota || !pesoNota || !dataAvaliacao) {
+  const handleSaveNota = async () => {
+    if (!subjectId || !title.trim() || !nota || !pesoNota || !dataAvaliacao) {
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -129,108 +152,170 @@ const Notas = () => {
       return;
     }
 
-    const notaData: NotaAcademica = {
-      id: editingNota?.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      disciplina,
-      tipoAvaliacao,
-      descricao: descricao.trim(),
-      nota: notaValue,
-      pesoNota: pesoValue,
-      dataAvaliacao: new Date(dataAvaliacao),
-      observacoes: observacoes.trim() || undefined,
-      status: notaValue >= 7.0 ? 'Aprovado' : notaValue >= 5.0 ? 'Pendente' : 'Reprovado'
-    };
+    try {
+      const gradeData = {
+        subject_id: subjectId,
+        assessment_type: tipoAvaliacao,
+        title: title.trim(),
+        grade: notaValue,
+        weight: pesoValue,
+        date: dataAvaliacao,
+        user_id: user!.id,
+      };
 
-    if (editingNota) {
-      setNotasAcademicas(prev => prev.map(n => n.id === editingNota.id ? notaData : n));
+      if (editingGrade) {
+        const { error } = await supabase
+          .from('grades')
+          .update(gradeData)
+          .eq('id', editingGrade.id)
+          .eq('user_id', user!.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Nota atualizada",
+          description: "Suas alterações foram salvas com sucesso.",
+        });
+      } else {
+        const { error } = await supabase
+          .from('grades')
+          .insert(gradeData);
+
+        if (error) throw error;
+
+        toast({
+          title: "Nova nota registrada",
+          description: "A nota foi salva com sucesso.",
+        });
+      }
+
+      resetForm();
+      setIsNewNotaOpen(false);
+      setEditingGrade(null);
+      loadGrades();
+    } catch (error) {
+      console.error('Error saving grade:', error);
       toast({
-        title: "Nota atualizada",
-        description: "Suas alterações foram salvas com sucesso.",
-      });
-    } else {
-      setNotasAcademicas(prev => [...prev, notaData]);
-      toast({
-        title: "Nova nota registrada",
-        description: "A nota foi salva com sucesso.",
+        title: "Erro ao salvar nota",
+        description: "Não foi possível salvar a nota. Tente novamente.",
+        variant: "destructive",
       });
     }
-
-    resetForm();
-    setIsNewNotaOpen(false);
-    setEditingNota(null);
   };
 
-  const handleEditNota = (nota: NotaAcademica) => {
-    setEditingNota(nota);
-    setDisciplina(nota.disciplina);
-    setTipoAvaliacao(nota.tipoAvaliacao);
-    setDescricao(nota.descricao);
-    setNota(nota.nota.toString());
-    setPesoNota(nota.pesoNota.toString());
-    setDataAvaliacao(nota.dataAvaliacao.toISOString().split('T')[0]);
-    setObservacoes(nota.observacoes || "");
+  const handleEditNota = (grade: Grade) => {
+    setEditingGrade(grade);
+    setSubjectId(grade.subject_id);
+    setTipoAvaliacao(grade.assessment_type as any);
+    setTitle(grade.title);
+    setNota(grade.grade.toString());
+    setPesoNota(grade.weight.toString());
+    setDataAvaliacao(grade.date);
     setIsNewNotaOpen(true);
   };
 
-  const handleDeleteNota = (notaId: string) => {
-    setNotasAcademicas(prev => prev.filter(n => n.id !== notaId));
-    toast({
-      title: "Nota excluída",
-      description: "A nota foi removida com sucesso.",
-    });
+  const handleDeleteNota = async (gradeId: string) => {
+    try {
+      const { error } = await supabase
+        .from('grades')
+        .delete()
+        .eq('id', gradeId)
+        .eq('user_id', user!.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Nota excluída",
+        description: "A nota foi removida com sucesso.",
+      });
+
+      loadGrades();
+    } catch (error) {
+      console.error('Error deleting grade:', error);
+      toast({
+        title: "Erro ao excluir nota",
+        description: "Não foi possível excluir a nota. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Cálculos acadêmicos
-  const disciplinasComNotas = useMemo(() => {
-    const disciplinasMap = new Map<string, NotaAcademica[]>();
+  const subjectsWithGrades = useMemo(() => {
+    const subjectsMap = new Map();
     
-    notasAcademicas.forEach(nota => {
-      if (!disciplinasMap.has(nota.disciplina)) {
-        disciplinasMap.set(nota.disciplina, []);
-      }
-      disciplinasMap.get(nota.disciplina)!.push(nota);
+    subjects.forEach(subject => {
+      subjectsMap.set(subject.id, {
+        ...subject,
+        grades: grades.filter(grade => grade.subject_id === subject.id)
+      });
     });
 
-    return Array.from(disciplinasMap.entries()).map(([nome, notas]) => {
-      const somaNotas = notas.reduce((acc, nota) => acc + (nota.nota * nota.pesoNota), 0);
-      const somaPesos = notas.reduce((acc, nota) => acc + nota.pesoNota, 0);
+    return Array.from(subjectsMap.values()).map((subject: any) => {
+      const subjectGrades = subject.grades;
+      
+      if (subjectGrades.length === 0) {
+        return {
+          ...subject,
+          media: 0,
+          status: 'Sem notas',
+          totalAvaliacoes: 0
+        };
+      }
+
+      const somaNotas = subjectGrades.reduce((acc: number, grade: Grade) => acc + (grade.grade * grade.weight), 0);
+      const somaPesos = subjectGrades.reduce((acc: number, grade: Grade) => acc + grade.weight, 0);
       const media = somaPesos > 0 ? somaNotas / somaPesos : 0;
       const status = media >= 7.0 ? 'Aprovado' : media >= 5.0 ? 'Pendente' : 'Reprovado';
       
       return {
-        nome,
-        notas,
+        ...subject,
+        grades: subjectGrades,
         media: parseFloat(media.toFixed(2)),
         status,
-        totalAvaliacoes: notas.length
+        totalAvaliacoes: subjectGrades.length
       };
     });
-  }, [notasAcademicas]);
+  }, [subjects, grades]);
 
   const estatisticas = useMemo(() => {
-    const totalNotas = notasAcademicas.length;
-    const totalDisciplinas = disciplinasComNotas.length;
-    const mediaGeral = disciplinasComNotas.length > 0 
-      ? parseFloat((disciplinasComNotas.reduce((acc, d) => acc + d.media, 0) / disciplinasComNotas.length).toFixed(2))
+    const totalNotas = grades.length;
+    const totalDisciplinas = subjects.length;
+    const subjectsWithData = subjectsWithGrades.filter(s => s.totalAvaliacoes > 0);
+    const mediaGeral = subjectsWithData.length > 0 
+      ? parseFloat((subjectsWithData.reduce((acc, d) => acc + d.media, 0) / subjectsWithData.length).toFixed(2))
       : 0;
     
-    const disciplinaAprovadas = disciplinasComNotas.filter(d => d.status === 'Aprovado').length;
+    const disciplinaAprovadas = subjectsWithData.filter(d => d.status === 'Aprovado').length;
     
     return {
       totalNotas,
-      totalDisciplinas,
+      totalDisciplinas: subjectsWithData.length,
       mediaGeral,
       disciplinaAprovadas,
-      percentualAprovacao: totalDisciplinas > 0 ? Math.round((disciplinaAprovadas / totalDisciplinas) * 100) : 0
+      percentualAprovacao: subjectsWithData.length > 0 ? Math.round((disciplinaAprovadas / subjectsWithData.length) * 100) : 0
     };
-  }, [disciplinasComNotas]);
+  }, [subjectsWithGrades, grades, subjects]);
 
-  const filteredDisciplinas = disciplinasComNotas.filter(disciplina => {
-    const matchesSearch = disciplina.nome.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDiscipline = selectedDiscipline === "all" || disciplina.nome === selectedDiscipline;
+  const filteredSubjects = subjectsWithGrades.filter(subject => {
+    const matchesSearch = subject.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSubject = selectedSubjectId === "all" || subject.id === selectedSubjectId;
     
-    return matchesSearch && matchesDiscipline;
+    return matchesSearch && matchesSubject;
   });
+
+  if (loading || subjectsLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header onMenuClick={handleMenuClick} />
+        <div className="container mx-auto px-4 py-6 max-w-7xl">
+          <div className="flex items-center justify-center h-40">
+            <div className="text-muted-foreground">Carregando...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -274,7 +359,7 @@ const Notas = () => {
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-3 sm:mx-auto">
                 <DialogHeader>
                   <DialogTitle className="text-lg sm:text-xl">
-                    {editingNota ? "Editar Nota" : "Registrar Nova Nota"}
+                    {editingGrade ? "Editar Nota" : "Registrar Nova Nota"}
                   </DialogTitle>
                 </DialogHeader>
                 
@@ -282,14 +367,14 @@ const Notas = () => {
                   {/* Form Fields */}
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="disciplina" className="text-sm font-medium">Disciplina *</Label>
-                      <Select value={disciplina} onValueChange={setDisciplina}>
+                      <Label htmlFor="subject" className="text-sm font-medium">Disciplina *</Label>
+                      <Select value={subjectId} onValueChange={setSubjectId}>
                         <SelectTrigger className="mt-1">
                           <SelectValue placeholder="Selecione a disciplina" />
                         </SelectTrigger>
                         <SelectContent>
-                          {disciplinas.map(disc => (
-                            <SelectItem key={disc} value={disc}>{disc}</SelectItem>
+                          {subjects.map(subject => (
+                            <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -310,11 +395,11 @@ const Notas = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="descricao" className="text-sm font-medium">Descrição *</Label>
+                    <Label htmlFor="title" className="text-sm font-medium">Título *</Label>
                     <Input
-                      id="descricao"
-                      value={descricao}
-                      onChange={(e) => setDescricao(e.target.value)}
+                      id="title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
                       placeholder="Ex: P1 - Primeira Prova"
                       className="mt-1"
                     />
@@ -359,17 +444,6 @@ const Notas = () => {
                       />
                     </div>
                   </div>
-
-                  <div>
-                    <Label htmlFor="observacoes" className="text-sm font-medium">Observações</Label>
-                    <Input
-                      id="observacoes"
-                      value={observacoes}
-                      onChange={(e) => setObservacoes(e.target.value)}
-                      placeholder="Comentários adicionais"
-                      className="mt-1"
-                    />
-                  </div>
                 </div>
 
                 <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-2">
@@ -377,7 +451,7 @@ const Notas = () => {
                     variant="outline"
                     onClick={() => {
                       setIsNewNotaOpen(false);
-                      setEditingNota(null);
+                      setEditingGrade(null);
                       resetForm();
                     }}
                     className="w-full sm:w-auto order-2 sm:order-1"
@@ -385,7 +459,7 @@ const Notas = () => {
                     Cancelar
                   </Button>
                   <Button onClick={handleSaveNota} className="bg-agro-green hover:bg-agro-green-light w-full sm:w-auto order-1 sm:order-2">
-                    {editingNota ? "Salvar" : "Registrar"}
+                    {editingGrade ? "Salvar" : "Registrar"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -456,14 +530,14 @@ const Notas = () => {
                   />
                 </div>
               </div>
-              <Select value={selectedDiscipline} onValueChange={setSelectedDiscipline}>
+              <Select value={selectedSubjectId} onValueChange={setSelectedSubjectId}>
                 <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Filtrar por disciplina" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as disciplinas</SelectItem>
-                  {disciplinas.map(disciplina => (
-                    <SelectItem key={disciplina} value={disciplina}>{disciplina}</SelectItem>
+                  {subjects.map(subject => (
+                    <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -472,118 +546,125 @@ const Notas = () => {
         </Card>
 
         {/* Disciplinas Grid */}
-        {filteredDisciplinas.length === 0 ? (
+        {filteredSubjects.length === 0 ? (
           <Card className="text-center py-8 sm:py-12">
             <CardContent>
               <GraduationCap className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
-              <h3 className="text-base sm:text-lg font-medium mb-2">Nenhuma nota registrada</h3>
+              <h3 className="text-base sm:text-lg font-medium mb-2">Nenhuma disciplina encontrada</h3>
               <p className="text-sm sm:text-base text-muted-foreground mb-4 px-4">
-                Comece registrando suas primeiras notas para acompanhar seu desempenho.
+                {subjects.length === 0 
+                  ? "Configure primeiro suas disciplinas em Configurações" 
+                  : "Comece registrando suas primeiras notas para acompanhar seu desempenho."
+                }
               </p>
-              <Button 
-                onClick={() => setIsNewNotaOpen(true)}
-                className="bg-agro-green hover:bg-agro-green-light w-full sm:w-auto"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Registrar Primeira Nota
-              </Button>
+              {subjects.length > 0 && (
+                <Button 
+                  onClick={() => setIsNewNotaOpen(true)}
+                  className="bg-agro-green hover:bg-agro-green-light w-full sm:w-auto"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Registrar Primeira Nota
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-4 sm:space-y-6">
-            {filteredDisciplinas.map((disciplina) => (
-              <Card key={disciplina.nome} className="overflow-hidden">
+            {filteredSubjects.map((subject) => (
+              <Card key={subject.id} className="overflow-hidden" style={{ borderLeft: `4px solid ${subject.color}` }}>
                 <CardHeader className="pb-3 sm:pb-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg sm:text-xl mb-2 truncate">{disciplina.nome}</CardTitle>
+                      <CardTitle className="text-lg sm:text-xl mb-2 truncate">{subject.name}</CardTitle>
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                         <div className="flex items-center gap-2">
                           <span className="text-xl sm:text-2xl font-bold text-foreground">
-                            {disciplina.media.toFixed(1)}
+                            {subject.media.toFixed(1)}
                           </span>
                           <Badge 
                             variant={
-                              disciplina.status === 'Aprovado' ? 'default' : 
-                              disciplina.status === 'Pendente' ? 'secondary' : 
+                              subject.status === 'Aprovado' ? 'default' : 
+                              subject.status === 'Pendente' ? 'secondary' : 
                               'destructive'
                             }
                             className={
-                              disciplina.status === 'Aprovado' ? 'bg-green-100 text-green-800 border-green-200' :
-                              disciplina.status === 'Pendente' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                              subject.status === 'Aprovado' ? 'bg-green-100 text-green-800 border-green-200' :
+                              subject.status === 'Pendente' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                              subject.status === 'Sem notas' ? 'bg-gray-100 text-gray-800 border-gray-200' :
                               'bg-red-100 text-red-800 border-red-200'
                             }
                           >
-                            {disciplina.status}
+                            {subject.status}
                           </Badge>
                         </div>
                         <div className="text-xs sm:text-sm text-muted-foreground">
-                          {disciplina.totalAvaliacoes} avaliação{disciplina.totalAvaliacoes !== 1 ? 'ões' : ''}
+                          {subject.totalAvaliacoes} avaliação{subject.totalAvaliacoes !== 1 ? 'ões' : ''}
                         </div>
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <Progress 
-                        value={Math.min(disciplina.media * 10, 100)} 
-                        className="w-20 sm:w-24 h-2 mb-1 sm:mb-2"
-                      />
-                      <div className="text-xs text-muted-foreground">
-                        {Math.min(disciplina.media * 10, 100).toFixed(0)}%
+                    {subject.totalAvaliacoes > 0 && (
+                      <div className="text-right flex-shrink-0">
+                        <Progress 
+                          value={Math.min(subject.media * 10, 100)} 
+                          className="w-20 sm:w-24 h-2 mb-1 sm:mb-2"
+                        />
+                        <div className="text-xs text-muted-foreground">
+                          {Math.min(subject.media * 10, 100).toFixed(0)}%
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </CardHeader>
                 
-                <CardContent className="pt-0">
-                  <div className="space-y-2 sm:space-y-3">
-                    {disciplina.notas.map((nota) => (
-                      <div key={nota.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-muted/30 rounded-lg gap-3 sm:gap-0">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-1">
-                            <Badge variant="outline" className="text-xs flex-shrink-0">
-                              {nota.tipoAvaliacao}
-                            </Badge>
-                            <span className="font-medium text-sm sm:text-base truncate">{nota.descricao}</span>
+                {subject.grades && subject.grades.length > 0 && (
+                  <CardContent className="pt-0">
+                    <div className="space-y-2 sm:space-y-3">
+                      {subject.grades.map((grade: Grade) => (
+                        <div key={grade.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-muted/30 rounded-lg gap-3 sm:gap-0">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <Badge variant="outline" className="text-xs flex-shrink-0">
+                                {grade.assessment_type}
+                              </Badge>
+                              <span className="font-medium text-sm sm:text-base truncate">{grade.title}</span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1 flex-shrink-0">
+                                <Calendar className="h-3 w-3" />
+                                {new Date(grade.date).toLocaleDateString()}
+                              </span>
+                              <span className="flex-shrink-0">Peso: {grade.weight}</span>
+                            </div>
                           </div>
-                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1 flex-shrink-0">
-                              <Calendar className="h-3 w-3" />
-                              {nota.dataAvaliacao.toLocaleDateString()}
-                            </span>
-                            <span className="flex-shrink-0">Peso: {nota.pesoNota}</span>
-                            {nota.observacoes && (
-                              <span className="truncate max-w-32 sm:max-w-40">{nota.observacoes}</span>
-                            )}
+                          <div className="flex items-center justify-between sm:justify-end gap-3">
+                            <div className="text-right">
+                              <div className="text-lg font-bold">{grade.grade.toFixed(1)}</div>
+                              <div className="text-xs text-muted-foreground">/ 10</div>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditNota(grade)}
+                                className="h-8 w-8"
+                              >
+                                <Edit3 className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteNota(grade.id)}
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between sm:justify-end gap-3">
-                          <div className="text-right">
-                            <div className="text-lg font-bold">{nota.nota.toFixed(1)}</div>
-                            <div className="text-xs text-muted-foreground">/ 10</div>
-                          </div>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditNota(nota)}
-                              className="h-8 w-8"
-                            >
-                              <Edit3 className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteNota(nota.id)}
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
+                      ))}
+                    </div>
+                  </CardContent>
+                )}
               </Card>
             ))}
           </div>
