@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { BookOpen, Plus, Search, Filter, Tag, Paperclip } from "lucide-react";
+import { BookOpen, Plus, Search, Filter, Tag, Paperclip, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,9 +11,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 const CadernoDigital = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDiscipline, setSelectedDiscipline] = useState("all");
-  const notes = [{
+  
+  // Estados para o formulário de nova anotação
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newNote, setNewNote] = useState({
+    title: "",
+    discipline: "",
+    content: "",
+    tags: "",
+    files: [] as File[]
+  });
+  const [notes, setNotes] = useState([{
     id: 1,
     title: "Irrigação por Gotejamento",
     discipline: "Solos",
@@ -36,7 +48,37 @@ const CadernoDigital = () => {
     tags: ["agroecologia", "sustentabilidade", "biodiversidade"],
     date: "2024-11-13",
     color: "bg-agro-field"
-  }];
+  }]);
+  
+  // Função para salvar nova anotação
+  const handleSaveNote = () => {
+    if (!newNote.title.trim() || !newNote.discipline || !newNote.content.trim()) {
+      return; // Validação básica
+    }
+    
+    const note = {
+      id: notes.length + 1,
+      title: newNote.title,
+      discipline: newNote.discipline,
+      content: newNote.content,
+      tags: newNote.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+      date: new Date().toISOString().split('T')[0],
+      color: "bg-agro-green" // Cor padrão para novas anotações
+    };
+    
+    setNotes([note, ...notes]);
+    
+    // Limpar formulário
+    setNewNote({
+      title: "",
+      discipline: "",
+      content: "",
+      tags: "",
+      files: []
+    });
+    
+    setIsDialogOpen(false);
+  };
   const disciplines = ["all", "Solos", "Fitotecnia", "Agroecologia", "Entomologia", "Zootecnia"];
   const filteredNotes = notes.filter(note => {
     const matchesSearch = note.title.toLowerCase().includes(searchTerm.toLowerCase()) || note.content.toLowerCase().includes(searchTerm.toLowerCase());
@@ -48,14 +90,24 @@ const CadernoDigital = () => {
         {/* Header */}
         <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="w-full sm:w-auto">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold flex items-center">
-              <BookOpen className="mr-2 sm:mr-3 h-6 w-6 sm:h-7 sm:w-7 text-agro-green" />
-              Caderno Digital
-            </h1>
-            <p className="text-sm sm:text-base text-muted-foreground mt-1">Organize suas anotações por disciplina</p>
+            <div className="flex items-center gap-3 mb-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => navigate(-1)}
+                className="hover:bg-muted"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold flex items-center">
+                <BookOpen className="mr-2 sm:mr-3 h-6 w-6 sm:h-7 sm:w-7 text-agro-green" />
+                Caderno Digital
+              </h1>
+            </div>
+            <p className="text-sm sm:text-base text-muted-foreground ml-12">Organize suas anotações por disciplina</p>
           </div>
           
-          <Dialog>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="w-full sm:w-auto h-10 sm:h-9">
                 <Plus className="mr-2 h-4 w-4" />
@@ -71,11 +123,16 @@ const CadernoDigital = () => {
                 <div className="space-y-4 pr-2">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Título</label>
-                    <Input placeholder="Título da anotação" className="h-11 sm:h-10" />
+                    <Input 
+                      placeholder="Título da anotação" 
+                      className="h-11 sm:h-10"
+                      value={newNote.title}
+                      onChange={(e) => setNewNote({...newNote, title: e.target.value})}
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Disciplina</label>
-                    <Select>
+                    <Select value={newNote.discipline} onValueChange={(value) => setNewNote({...newNote, discipline: value})}>
                       <SelectTrigger className="h-11 sm:h-10">
                         <SelectValue placeholder="Selecione a disciplina" />
                       </SelectTrigger>
@@ -86,11 +143,22 @@ const CadernoDigital = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Conteúdo</label>
-                    <Textarea placeholder="Conteúdo da anotação..." rows={8} className="min-h-[120px] resize-none" />
+                    <Textarea 
+                      placeholder="Conteúdo da anotação..." 
+                      rows={8} 
+                      className="min-h-[120px] resize-none"
+                      value={newNote.content}
+                      onChange={(e) => setNewNote({...newNote, content: e.target.value})}
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Tags</label>
-                    <Input placeholder="Tags (separadas por vírgula)" className="h-11 sm:h-10" />
+                    <Input 
+                      placeholder="Tags (separadas por vírgula)" 
+                      className="h-11 sm:h-10"
+                      value={newNote.tags}
+                      onChange={(e) => setNewNote({...newNote, tags: e.target.value})}
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium flex items-center">
@@ -110,7 +178,13 @@ const CadernoDigital = () => {
                 </div>
               </div>
               <div className="pt-4 border-t">
-                <Button className="w-full h-11 sm:h-10">Salvar Anotação</Button>
+                <Button 
+                  className="w-full h-11 sm:h-10" 
+                  onClick={handleSaveNote}
+                  disabled={!newNote.title.trim() || !newNote.discipline || !newNote.content.trim()}
+                >
+                  Salvar Anotação
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
