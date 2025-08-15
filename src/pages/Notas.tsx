@@ -1,24 +1,21 @@
-import { useState, useRef } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
-  StickyNote, 
+  GraduationCap, 
   Plus, 
   Search, 
-  Filter, 
-  Star, 
-  StarOff,
+  TrendingUp, 
+  BookOpen,
   Edit3, 
   Trash2, 
-  Download, 
-  Share2,
-  Tag,
+  Target,
   Calendar,
-  FileText,
   ArrowLeft,
-  BookOpen,
-  Lightbulb,
-  ClipboardList,
-  Bookmark
+  Award,
+  Calculator,
+  BarChart3,
+  ClipboardCheck,
+  Trophy
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,23 +24,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/layout/Header";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { Progress } from "@/components/ui/progress";
 
-interface Note {
+interface NotaAcademica {
   id: string;
-  title: string;
-  content: string;
-  discipline: string;
-  tags: string[];
-  isFavorite: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  template: string;
-  attachments?: string[];
+  disciplina: string;
+  tipoAvaliacao: 'Prova' | 'Trabalho' | 'Seminário' | 'Projeto' | 'Participação' | 'Outro';
+  descricao: string;
+  nota: number;
+  pesoNota: number;
+  dataAvaliacao: Date;
+  observacoes?: string;
+  status: 'Aprovado' | 'Reprovado' | 'Pendente';
 }
 
 const disciplinas = [
@@ -59,148 +55,182 @@ const disciplinas = [
   "Extensão Rural"
 ];
 
-const templates = [
-  { id: "blank", name: "Nota em branco", icon: FileText, content: "" },
-  { id: "class", name: "Anotações de aula", icon: BookOpen, content: "# Aula - [Data]\n\n## Disciplina: \n\n## Tópicos abordados:\n- \n- \n- \n\n## Observações importantes:\n\n\n## Dúvidas:\n\n\n## Para próxima aula:\n" },
-  { id: "research", name: "Pesquisa", icon: Lightbulb, content: "# Pesquisa - [Título]\n\n## Objetivo:\n\n\n## Metodologia:\n\n\n## Resultados:\n\n\n## Conclusões:\n\n\n## Referências:\n" },
-  { id: "summary", name: "Resumo", icon: ClipboardList, content: "# Resumo - [Tópico]\n\n## Conceitos principais:\n\n\n## Pontos importantes:\n- \n- \n- \n\n## Aplicações práticas:\n\n\n## Referências:\n" }
-];
+const tiposAvaliacao = [
+  'Prova',
+  'Trabalho', 
+  'Seminário',
+  'Projeto',
+  'Participação',
+  'Outro'
+] as const;
 
 const Notas = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [notasAcademicas, setNotasAcademicas] = useState<NotaAcademica[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>("all");
-  const [showFavorites, setShowFavorites] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isNewNoteOpen, setIsNewNoteOpen] = useState(false);
-  const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [isNewNotaOpen, setIsNewNotaOpen] = useState(false);
+  const [editingNota, setEditingNota] = useState<NotaAcademica | null>(null);
   
   // Form states
-  const [noteTitle, setNoteTitle] = useState("");
-  const [noteContent, setNoteContent] = useState("");
-  const [noteDiscipline, setNoteDiscipline] = useState("");
-  const [noteTags, setNoteTags] = useState("");
-  const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [disciplina, setDisciplina] = useState("");
+  const [tipoAvaliacao, setTipoAvaliacao] = useState<'Prova' | 'Trabalho' | 'Seminário' | 'Projeto' | 'Participação' | 'Outro'>('Prova');
+  const [descricao, setDescricao] = useState("");
+  const [nota, setNota] = useState("");
+  const [pesoNota, setPesoNota] = useState("");
+  const [dataAvaliacao, setDataAvaliacao] = useState("");
+  const [observacoes, setObservacoes] = useState("");
 
   const handleMenuClick = () => {
     setMobileMenuOpen(true);
   };
 
   const resetForm = () => {
-    setNoteTitle("");
-    setNoteContent("");
-    setNoteDiscipline("");
-    setNoteTags("");
-    setSelectedTemplate("");
+    setDisciplina("");
+    setTipoAvaliacao('Prova');
+    setDescricao("");
+    setNota("");
+    setPesoNota("");
+    setDataAvaliacao("");
+    setObservacoes("");
   };
 
-  const handleSaveNote = () => {
-    if (!noteTitle.trim() || !noteContent.trim()) {
+  const handleSaveNota = () => {
+    if (!disciplina || !descricao.trim() || !nota || !pesoNota || !dataAvaliacao) {
       toast({
         title: "Campos obrigatórios",
-        description: "Por favor, preencha o título e o conteúdo da nota.",
+        description: "Por favor, preencha todos os campos obrigatórios.",
         variant: "destructive",
       });
       return;
     }
 
-    const noteData: Note = {
-      id: editingNote?.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      title: noteTitle.trim(),
-      content: noteContent.trim(),
-      discipline: noteDiscipline || "Não categorizado",
-      tags: noteTags.split(",").map(tag => tag.trim()).filter(Boolean),
-      isFavorite: editingNote?.isFavorite || false,
-      createdAt: editingNote?.createdAt || new Date(),
-      updatedAt: new Date(),
-      template: selectedTemplate || "blank",
+    const notaValue = parseFloat(nota);
+    const pesoValue = parseFloat(pesoNota);
+
+    if (notaValue < 0 || notaValue > 10) {
+      toast({
+        title: "Nota inválida",
+        description: "A nota deve estar entre 0 e 10.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (pesoValue <= 0) {
+      toast({
+        title: "Peso inválido", 
+        description: "O peso deve ser maior que 0.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const notaData: NotaAcademica = {
+      id: editingNota?.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      disciplina,
+      tipoAvaliacao,
+      descricao: descricao.trim(),
+      nota: notaValue,
+      pesoNota: pesoValue,
+      dataAvaliacao: new Date(dataAvaliacao),
+      observacoes: observacoes.trim() || undefined,
+      status: notaValue >= 7.0 ? 'Aprovado' : notaValue >= 5.0 ? 'Pendente' : 'Reprovado'
     };
 
-    if (editingNote) {
-      setNotes(prev => prev.map(note => note.id === editingNote.id ? noteData : note));
+    if (editingNota) {
+      setNotasAcademicas(prev => prev.map(n => n.id === editingNota.id ? notaData : n));
       toast({
         title: "Nota atualizada",
         description: "Suas alterações foram salvas com sucesso.",
       });
     } else {
-      setNotes(prev => [...prev, noteData]);
+      setNotasAcademicas(prev => [...prev, notaData]);
       toast({
-        title: "Nova nota criada",
-        description: "Sua nota foi salva com sucesso.",
+        title: "Nova nota registrada",
+        description: "A nota foi salva com sucesso.",
       });
     }
 
     resetForm();
-    setIsNewNoteOpen(false);
-    setEditingNote(null);
+    setIsNewNotaOpen(false);
+    setEditingNota(null);
   };
 
-  const handleEditNote = (note: Note) => {
-    setEditingNote(note);
-    setNoteTitle(note.title);
-    setNoteContent(note.content);
-    setNoteDiscipline(note.discipline);
-    setNoteTags(note.tags.join(", "));
-    setSelectedTemplate(note.template);
-    setIsNewNoteOpen(true);
+  const handleEditNota = (nota: NotaAcademica) => {
+    setEditingNota(nota);
+    setDisciplina(nota.disciplina);
+    setTipoAvaliacao(nota.tipoAvaliacao);
+    setDescricao(nota.descricao);
+    setNota(nota.nota.toString());
+    setPesoNota(nota.pesoNota.toString());
+    setDataAvaliacao(nota.dataAvaliacao.toISOString().split('T')[0]);
+    setObservacoes(nota.observacoes || "");
+    setIsNewNotaOpen(true);
   };
 
-  const handleDeleteNote = (noteId: string) => {
-    setNotes(prev => prev.filter(note => note.id !== noteId));
+  const handleDeleteNota = (notaId: string) => {
+    setNotasAcademicas(prev => prev.filter(n => n.id !== notaId));
     toast({
       title: "Nota excluída",
       description: "A nota foi removida com sucesso.",
     });
   };
 
-  const toggleFavorite = (noteId: string) => {
-    setNotes(prev => prev.map(note => 
-      note.id === noteId 
-        ? { ...note, isFavorite: !note.isFavorite }
-        : note
-    ));
-  };
-
-  const handleTemplateSelect = (templateId: string) => {
-    const template = templates.find(t => t.id === templateId);
-    if (template) {
-      setSelectedTemplate(templateId);
-      setNoteContent(template.content);
-    }
-  };
-
-  const exportNote = (note: Note) => {
-    const content = `# ${note.title}\n\n**Disciplina:** ${note.discipline}\n**Tags:** ${note.tags.join(", ")}\n**Criado em:** ${note.createdAt.toLocaleDateString()}\n\n---\n\n${note.content}`;
+  // Cálculos acadêmicos
+  const disciplinasComNotas = useMemo(() => {
+    const disciplinasMap = new Map<string, NotaAcademica[]>();
     
-    const blob = new Blob([content], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${note.title.replace(/\s+/g, "_")}.md`;
-    link.click();
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: "Nota exportada",
-      description: "A nota foi baixada como arquivo Markdown.",
+    notasAcademicas.forEach(nota => {
+      if (!disciplinasMap.has(nota.disciplina)) {
+        disciplinasMap.set(nota.disciplina, []);
+      }
+      disciplinasMap.get(nota.disciplina)!.push(nota);
     });
-  };
 
-  const filteredNotes = notes.filter(note => {
-    const matchesSearch = note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         note.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesDiscipline = selectedDiscipline === "all" || note.discipline === selectedDiscipline;
-    const matchesFavorites = !showFavorites || note.isFavorite;
+    return Array.from(disciplinasMap.entries()).map(([nome, notas]) => {
+      const somaNotas = notas.reduce((acc, nota) => acc + (nota.nota * nota.pesoNota), 0);
+      const somaPesos = notas.reduce((acc, nota) => acc + nota.pesoNota, 0);
+      const media = somaPesos > 0 ? somaNotas / somaPesos : 0;
+      const status = media >= 7.0 ? 'Aprovado' : media >= 5.0 ? 'Pendente' : 'Reprovado';
+      
+      return {
+        nome,
+        notas,
+        media: parseFloat(media.toFixed(2)),
+        status,
+        totalAvaliacoes: notas.length
+      };
+    });
+  }, [notasAcademicas]);
+
+  const estatisticas = useMemo(() => {
+    const totalNotas = notasAcademicas.length;
+    const totalDisciplinas = disciplinasComNotas.length;
+    const mediaGeral = disciplinasComNotas.length > 0 
+      ? parseFloat((disciplinasComNotas.reduce((acc, d) => acc + d.media, 0) / disciplinasComNotas.length).toFixed(2))
+      : 0;
     
-    return matchesSearch && matchesDiscipline && matchesFavorites;
-  });
+    const disciplinaAprovadas = disciplinasComNotas.filter(d => d.status === 'Aprovado').length;
+    
+    return {
+      totalNotas,
+      totalDisciplinas,
+      mediaGeral,
+      disciplinaAprovadas,
+      percentualAprovacao: totalDisciplinas > 0 ? Math.round((disciplinaAprovadas / totalDisciplinas) * 100) : 0
+    };
+  }, [disciplinasComNotas]);
 
-  const favoriteNotes = notes.filter(note => note.isFavorite);
-  const recentNotes = notes.slice().sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()).slice(0, 5);
+  const filteredDisciplinas = disciplinasComNotas.filter(disciplina => {
+    const matchesSearch = disciplina.nome.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDiscipline = selectedDiscipline === "all" || disciplina.nome === selectedDiscipline;
+    
+    return matchesSearch && matchesDiscipline;
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -230,69 +260,48 @@ const Notas = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-foreground">Minhas Notas</h1>
-              <p className="text-muted-foreground">Organize suas anotações acadêmicas</p>
+              <h1 className="text-3xl font-bold text-foreground">Desempenho Acadêmico</h1>
+              <p className="text-muted-foreground">Acompanhe suas notas e médias por disciplina</p>
             </div>
-            <Dialog open={isNewNoteOpen} onOpenChange={setIsNewNoteOpen}>
+            <Dialog open={isNewNotaOpen} onOpenChange={setIsNewNotaOpen}>
               <DialogTrigger asChild>
                 <Button onClick={resetForm} className="bg-agro-green hover:bg-agro-green-light">
                   <Plus className="h-4 w-4 mr-2" />
-                  Nova Nota
+                  Registrar Nota
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>
-                    {editingNote ? "Editar Nota" : "Nova Nota"}
+                    {editingNota ? "Editar Nota" : "Registrar Nova Nota"}
                   </DialogTitle>
                 </DialogHeader>
                 
                 <div className="space-y-6">
-                  {/* Template Selection */}
-                  {!editingNote && (
-                    <div>
-                      <Label>Escolha um template</Label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                        {templates.map((template) => (
-                          <Card 
-                            key={template.id} 
-                            className={`cursor-pointer transition-colors hover:bg-accent/50 ${
-                              selectedTemplate === template.id ? "ring-2 ring-agro-green" : ""
-                            }`}
-                            onClick={() => handleTemplateSelect(template.id)}
-                          >
-                            <CardContent className="p-4">
-                              <div className="flex items-center gap-3">
-                                <template.icon className="h-5 w-5 text-agro-green" />
-                                <span className="font-medium text-sm">{template.name}</span>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   {/* Form Fields */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="title">Título *</Label>
-                      <Input
-                        id="title"
-                        value={noteTitle}
-                        onChange={(e) => setNoteTitle(e.target.value)}
-                        placeholder="Digite o título da nota"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="discipline">Disciplina</Label>
-                      <Select value={noteDiscipline} onValueChange={setNoteDiscipline}>
+                      <Label htmlFor="disciplina">Disciplina *</Label>
+                      <Select value={disciplina} onValueChange={setDisciplina}>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione a disciplina" />
                         </SelectTrigger>
                         <SelectContent>
-                          {disciplinas.map(disciplina => (
-                            <SelectItem key={disciplina} value={disciplina}>{disciplina}</SelectItem>
+                          {disciplinas.map(disc => (
+                            <SelectItem key={disc} value={disc}>{disc}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="tipoAvaliacao">Tipo de Avaliação *</Label>
+                      <Select value={tipoAvaliacao} onValueChange={(value: any) => setTipoAvaliacao(value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tiposAvaliacao.map(tipo => (
+                            <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -300,27 +309,60 @@ const Notas = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="tags">Tags (separadas por vírgula)</Label>
+                    <Label htmlFor="descricao">Descrição *</Label>
                     <Input
-                      id="tags"
-                      value={noteTags}
-                      onChange={(e) => setNoteTags(e.target.value)}
-                      placeholder="aula, importante, prova"
+                      id="descricao"
+                      value={descricao}
+                      onChange={(e) => setDescricao(e.target.value)}
+                      placeholder="Ex: P1 - Primeira Prova, Trabalho Final, etc."
                     />
                   </div>
 
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="nota">Nota (0-10) *</Label>
+                      <Input
+                        id="nota"
+                        type="number"
+                        min="0"
+                        max="10"
+                        step="0.1"
+                        value={nota}
+                        onChange={(e) => setNota(e.target.value)}
+                        placeholder="8.5"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="pesoNota">Peso da Nota *</Label>
+                      <Input
+                        id="pesoNota"
+                        type="number"
+                        min="0.1"
+                        step="0.1"
+                        value={pesoNota}
+                        onChange={(e) => setPesoNota(e.target.value)}
+                        placeholder="2.0"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="dataAvaliacao">Data da Avaliação *</Label>
+                      <Input
+                        id="dataAvaliacao"
+                        type="date"
+                        value={dataAvaliacao}
+                        onChange={(e) => setDataAvaliacao(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
                   <div>
-                    <Label htmlFor="content">Conteúdo *</Label>
-                    <Textarea
-                      id="content"
-                      value={noteContent}
-                      onChange={(e) => setNoteContent(e.target.value)}
-                      placeholder="Digite o conteúdo da sua nota aqui..."
-                      className="min-h-[300px] font-mono text-sm"
+                    <Label htmlFor="observacoes">Observações</Label>
+                    <Input
+                      id="observacoes"
+                      value={observacoes}
+                      onChange={(e) => setObservacoes(e.target.value)}
+                      placeholder="Comentários adicionais sobre a avaliação"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Suporte a Markdown básico (# Título, **negrito**, *itálico*, - lista)
-                    </p>
                   </div>
                 </div>
 
@@ -328,41 +370,30 @@ const Notas = () => {
                   <Button
                     variant="outline"
                     onClick={() => {
-                      setIsNewNoteOpen(false);
-                      setEditingNote(null);
+                      setIsNewNotaOpen(false);
+                      setEditingNota(null);
                       resetForm();
                     }}
                   >
                     Cancelar
                   </Button>
-                  <Button onClick={handleSaveNote} className="bg-agro-green hover:bg-agro-green-light">
-                    {editingNote ? "Salvar Alterações" : "Criar Nota"}
+                  <Button onClick={handleSaveNota} className="bg-agro-green hover:bg-agro-green-light">
+                    {editingNota ? "Salvar Alterações" : "Registrar Nota"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          {/* Dashboard com Estatísticas */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
-                  <StickyNote className="h-8 w-8 text-agro-green" />
+                  <Calculator className="h-8 w-8 text-agro-green" />
                   <div>
-                    <p className="text-2xl font-bold">{notes.length}</p>
-                    <p className="text-sm text-muted-foreground">Total de notas</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <Star className="h-8 w-8 text-accent" />
-                  <div>
-                    <p className="text-2xl font-bold">{favoriteNotes.length}</p>
-                    <p className="text-sm text-muted-foreground">Favoritas</p>
+                    <p className="text-2xl font-bold">{estatisticas.mediaGeral.toFixed(1)}</p>
+                    <p className="text-sm text-muted-foreground">Média Geral</p>
                   </div>
                 </div>
               </CardContent>
@@ -372,8 +403,30 @@ const Notas = () => {
                 <div className="flex items-center gap-3">
                   <BookOpen className="h-8 w-8 text-agro-sky" />
                   <div>
-                    <p className="text-2xl font-bold">{new Set(notes.map(n => n.discipline)).size}</p>
+                    <p className="text-2xl font-bold">{estatisticas.totalDisciplinas}</p>
                     <p className="text-sm text-muted-foreground">Disciplinas</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <ClipboardCheck className="h-8 w-8 text-agro-earth" />
+                  <div>
+                    <p className="text-2xl font-bold">{estatisticas.totalNotas}</p>
+                    <p className="text-sm text-muted-foreground">Avaliações</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <Trophy className="h-8 w-8 text-accent" />
+                  <div>
+                    <p className="text-2xl font-bold">{estatisticas.percentualAprovacao}%</p>
+                    <p className="text-sm text-muted-foreground">Aprovação</p>
                   </div>
                 </div>
               </CardContent>
@@ -389,7 +442,7 @@ const Notas = () => {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar notas..."
+                    placeholder="Buscar disciplinas..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -407,120 +460,126 @@ const Notas = () => {
                   ))}
                 </SelectContent>
               </Select>
-              <Button
-                variant={showFavorites ? "default" : "outline"}
-                onClick={() => setShowFavorites(!showFavorites)}
-                className="w-full sm:w-auto"
-              >
-                <Star className="h-4 w-4 mr-2" />
-                Favoritas
-              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Notes Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredNotes.map((note) => (
-            <Card key={note.id} className="overflow-hidden hover:shadow-lg transition-all duration-300">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg line-clamp-2 mb-2">{note.title}</CardTitle>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      {note.updatedAt.toLocaleDateString()}
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => toggleFavorite(note.id)}
-                    className="h-8 w-8 flex-shrink-0"
-                  >
-                    {note.isFavorite ? (
-                      <Star className="h-4 w-4 text-accent fill-current" />
-                    ) : (
-                      <StarOff className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="pt-0">
-                <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                  {note.content.replace(/[#*\-\[\]]/g, "")}
-                </p>
-                
-                <div className="space-y-3">
-                  <Badge variant="secondary" className="text-xs">
-                    {note.discipline}
-                  </Badge>
-                  
-                  {note.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {note.tags.slice(0, 3).map((tag, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          <Tag className="h-3 w-3 mr-1" />
-                          {tag}
-                        </Badge>
-                      ))}
-                      {note.tags.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{note.tags.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center gap-1 pt-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEditNote(note)}
-                      className="h-8 w-8"
-                    >
-                      <Edit3 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => exportNote(note)}
-                      className="h-8 w-8"
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteNote(note.id)}
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {filteredNotes.length === 0 && (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <StickyNote className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">Nenhuma nota encontrada</h3>
+        {/* Disciplinas Grid */}
+        {filteredDisciplinas.length === 0 ? (
+          <Card className="text-center py-12">
+            <CardContent>
+              <GraduationCap className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">Nenhuma nota registrada</h3>
               <p className="text-muted-foreground mb-4">
-                {notes.length === 0 
-                  ? "Comece criando sua primeira nota" 
-                  : "Tente ajustar os filtros de busca"}
+                Comece registrando suas primeiras notas para acompanhar seu desempenho.
               </p>
-              <Button onClick={() => setIsNewNoteOpen(true)} className="bg-agro-green hover:bg-agro-green-light">
+              <Button 
+                onClick={() => setIsNewNotaOpen(true)}
+                className="bg-agro-green hover:bg-agro-green-light"
+              >
                 <Plus className="h-4 w-4 mr-2" />
-                Criar Primeira Nota
+                Registrar Primeira Nota
               </Button>
             </CardContent>
           </Card>
+        ) : (
+          <div className="space-y-6">
+            {filteredDisciplinas.map((disciplina) => (
+              <Card key={disciplina.nome} className="overflow-hidden">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-xl mb-2">{disciplina.nome}</CardTitle>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl font-bold text-foreground">
+                            {disciplina.media.toFixed(1)}
+                          </span>
+                          <Badge 
+                            variant={
+                              disciplina.status === 'Aprovado' ? 'default' : 
+                              disciplina.status === 'Pendente' ? 'secondary' : 
+                              'destructive'
+                            }
+                            className={
+                              disciplina.status === 'Aprovado' ? 'bg-green-100 text-green-800 border-green-200' :
+                              disciplina.status === 'Pendente' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                              'bg-red-100 text-red-800 border-red-200'
+                            }
+                          >
+                            {disciplina.status}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {disciplina.totalAvaliacoes} avaliação{disciplina.totalAvaliacoes !== 1 ? 'ões' : ''}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Progress 
+                        value={Math.min(disciplina.media * 10, 100)} 
+                        className="w-24 h-2 mb-2"
+                      />
+                      <div className="text-xs text-muted-foreground">
+                        Progresso: {Math.min(disciplina.media * 10, 100).toFixed(0)}%
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                
+                <CardContent>
+                  <div className="space-y-3">
+                    {disciplina.notas.map((nota) => (
+                      <div key={nota.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="outline" className="text-xs">
+                              {nota.tipoAvaliacao}
+                            </Badge>
+                            <span className="font-medium">{nota.descricao}</span>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {nota.dataAvaliacao.toLocaleDateString()}
+                            </span>
+                            <span>Peso: {nota.pesoNota}</span>
+                            {nota.observacoes && (
+                              <span className="truncate max-w-40">{nota.observacoes}</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <div className="text-lg font-bold">{nota.nota.toFixed(1)}</div>
+                            <div className="text-xs text-muted-foreground">/ 10</div>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditNota(nota)}
+                              className="h-8 w-8"
+                            >
+                              <Edit3 className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteNota(nota.id)}
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
     </div>
