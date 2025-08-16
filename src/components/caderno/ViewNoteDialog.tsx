@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { NoteWithSubject } from "@/hooks/useNotes";
+import { supabase } from "@/integrations/supabase/client";
+import React from "react";
 
 interface ViewNoteDialogProps {
   note: NoteWithSubject | null;
@@ -12,6 +14,119 @@ interface ViewNoteDialogProps {
   onOpenChange: (open: boolean) => void;
   onDelete?: (noteId: string) => void;
 }
+
+interface AttachmentItemProps {
+  attachment: {
+    id: string;
+    file_name: string;
+    file_path: string;
+    file_size: number;
+    file_type: string;
+  };
+}
+
+const AttachmentItem = ({ attachment }: AttachmentItemProps) => {
+  const handleDownload = async () => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('note-attachments')
+        .download(attachment.file_path);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = attachment.file_name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+    }
+  };
+
+  const getFileIcon = (fileType: string) => {
+    if (fileType.startsWith('image/')) {
+      return <Image className="h-4 w-4" />;
+    }
+    return <FileText className="h-4 w-4" />;
+  };
+
+  const isImage = (fileType: string) => fileType.startsWith('image/');
+
+  return (
+    <div className="border rounded-lg p-4 space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {getFileIcon(attachment.file_type)}
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium truncate">{attachment.file_name}</p>
+            <p className="text-xs text-muted-foreground">
+              {(attachment.file_size / 1024 / 1024).toFixed(2)} MB
+            </p>
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleDownload}
+          className="flex-shrink-0"
+        >
+          <Download className="h-4 w-4 mr-2" />
+          Download
+        </Button>
+      </div>
+      
+      {/* Preview for images */}
+      {isImage(attachment.file_type) && (
+        <div className="mt-3">
+          <ImagePreview filePath={attachment.file_path} fileName={attachment.file_name} />
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ImagePreview = ({ filePath, fileName }: { filePath: string; fileName: string }) => {
+  const [imageUrl, setImageUrl] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const loadImage = async () => {
+      try {
+        const { data, error } = await supabase.storage
+          .from('note-attachments')
+          .download(filePath);
+
+        if (error) throw error;
+
+        const url = URL.createObjectURL(data);
+        setImageUrl(url);
+      } catch (error) {
+        console.error('Error loading image:', error);
+      }
+    };
+
+    loadImage();
+
+    return () => {
+      if (imageUrl) {
+        URL.revokeObjectURL(imageUrl);
+      }
+    };
+  }, [filePath]);
+
+  if (!imageUrl) return null;
+
+  return (
+    <img
+      src={imageUrl}
+      alt={fileName}
+      className="max-w-full h-auto max-h-64 rounded-md border"
+    />
+  );
+};
 
 export const ViewNoteDialog = ({ note, open, onOpenChange, onDelete }: ViewNoteDialogProps) => {
   if (!note) return null;
@@ -104,6 +219,18 @@ export const ViewNoteDialog = ({ note, open, onOpenChange, onDelete }: ViewNoteD
                       <Tag className="mr-1 h-3 w-3" />
                       {tag}
                     </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Attachments */}
+            {note.attachments && note.attachments.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg">Arquivos Anexados</h3>
+                <div className="space-y-3">
+                  {note.attachments.map((attachment) => (
+                    <AttachmentItem key={attachment.id} attachment={attachment} />
                   ))}
                 </div>
               </div>

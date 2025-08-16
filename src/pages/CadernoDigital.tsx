@@ -54,7 +54,8 @@ const CadernoDigital = () => {
       title: newNote.title,
       subject_id: newNote.subject_id,
       content_md: newNote.content_md,
-      tags: tagsArray
+      tags: tagsArray,
+      files: newNote.files
     });
     
     if (createdNote) {

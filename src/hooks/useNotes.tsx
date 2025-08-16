@@ -20,6 +20,13 @@ export interface NoteWithSubject extends Note {
     name: string;
     color: string;
   };
+  attachments?: {
+    id: string;
+    file_name: string;
+    file_path: string;
+    file_size: number;
+    file_type: string;
+  }[];
 }
 
 export const useNotes = () => {
@@ -48,13 +55,23 @@ export const useNotes = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      const notesWithSubjects = data?.map(note => ({
-        ...note,
-        subject: note.subjects ? note.subjects : undefined,
-        content_md: note.content_md || '',
-        tags: note.tags || []
-      })) || [];
+
+      // Load attachments separately for each note
+      const notesWithSubjects = [];
+      for (const note of data || []) {
+        const { data: attachments } = await supabase
+          .from('note_attachments')
+          .select('*')
+          .eq('note_id', note.id);
+
+        notesWithSubjects.push({
+          ...note,
+          subject: note.subjects ? note.subjects : undefined,
+          content_md: note.content_md || '',
+          tags: note.tags || [],
+          attachments: attachments || []
+        });
+      }
       
       setNotes(notesWithSubjects);
     } catch (error) {
@@ -74,10 +91,12 @@ export const useNotes = () => {
     content_md: string;
     subject_id?: string;
     tags?: string[];
+    files?: File[];
   }) => {
     if (!user) return null;
 
     try {
+      // First create the note
       const { data, error } = await supabase
         .from('notes_journal')
         .insert({
@@ -99,11 +118,50 @@ export const useNotes = () => {
 
       if (error) throw error;
 
+      // Handle file uploads if any
+      const uploadedAttachments = [];
+      if (noteData.files && noteData.files.length > 0) {
+        for (const file of noteData.files) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${user.id}/${data.id}/${Date.now()}.${fileExt}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('note-attachments')
+            .upload(fileName, file);
+
+          if (uploadError) {
+            console.error('Error uploading file:', uploadError);
+            continue;
+          }
+
+          // Save attachment record
+          const { data: attachmentData, error: attachmentError } = await supabase
+            .from('note_attachments')
+            .insert({
+              note_id: data.id,
+              file_name: file.name,
+              file_path: fileName,
+              file_size: file.size,
+              file_type: file.type,
+              user_id: user.id
+            })
+            .select()
+            .single();
+
+          if (attachmentError) {
+            console.error('Error saving attachment record:', attachmentError);
+          } else {
+            uploadedAttachments.push(attachmentData);
+          }
+        }
+      }
+
       const newNote = {
         ...data,
         subject: data.subjects ? data.subjects : undefined,
         content_md: data.content_md || '',
-        tags: data.tags || []
+        tags: data.tags || [],
+        attachments: uploadedAttachments
       };
 
       setNotes(prev => [newNote, ...prev]);
