@@ -21,6 +21,7 @@ export type Database = {
           ends_at: string | null
           id: string
           location: string | null
+          priority: string | null
           reminders_min_before: number[] | null
           source: string
           starts_at: string
@@ -36,6 +37,7 @@ export type Database = {
           ends_at?: string | null
           id?: string
           location?: string | null
+          priority?: string | null
           reminders_min_before?: number[] | null
           source?: string
           starts_at: string
@@ -51,6 +53,7 @@ export type Database = {
           ends_at?: string | null
           id?: string
           location?: string | null
+          priority?: string | null
           reminders_min_before?: number[] | null
           source?: string
           starts_at?: string
