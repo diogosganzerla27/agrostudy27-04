@@ -75,10 +75,10 @@ const AgendaAcademica = () => {
 
   const getEventIcon = (type: string) => {
     switch (type) {
-      case 'exam': return AlertCircle;
-      case 'assignment': return FileText;
-      case 'visit': return Calendar;
-      case 'seminar': return BookOpen;
+      case 'prova': return AlertCircle;
+      case 'trabalho': return FileText;
+      case 'aula': return BookOpen;
+      case 'outro': return Calendar;
       default: return Calendar;
     }
   };
@@ -107,8 +107,8 @@ const AgendaAcademica = () => {
     const today = new Date();
     const diffDays = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
     
-    if (event.type === 'exam' && diffDays <= 7) return 'high';
-    if (event.type === 'assignment' && diffDays <= 3) return 'high';
+    if (event.type === 'prova' && diffDays <= 7) return 'high';
+    if (event.type === 'trabalho' && diffDays <= 3) return 'high';
     if (diffDays <= 1) return 'high';
     if (diffDays <= 7) return 'medium';
     return 'low';
@@ -204,10 +204,10 @@ const AgendaAcademica = () => {
                         <SelectValue placeholder="Tipo de evento" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="exam">Prova</SelectItem>
-                        <SelectItem value="assignment">Trabalho</SelectItem>
-                        <SelectItem value="visit">Visita Técnica</SelectItem>
-                        <SelectItem value="seminar">Seminário</SelectItem>
+                        <SelectItem value="prova">Prova</SelectItem>
+                        <SelectItem value="trabalho">Trabalho</SelectItem>
+                        <SelectItem value="aula">Aula</SelectItem>
+                        <SelectItem value="outro">Outro</SelectItem>
                       </SelectContent>
                     </Select>
                     <Select value={newEvent.subject_id} onValueChange={(value) => setNewEvent({...newEvent, subject_id: value})}>

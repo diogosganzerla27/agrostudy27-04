@@ -128,7 +128,7 @@ export const Dashboard = () => {
           title="Próximos Eventos" 
           value={upcomingEvents.length.toString()} 
           icon={Calendar} 
-          description={`${events.filter(e => e.type === 'exam').length} provas total`} 
+          description={`${events.filter(e => e.type === 'prova').length} provas total`} 
           variant="sky" 
         />
         <StatsCard 
@@ -170,8 +170,8 @@ export const Dashboard = () => {
                 const diffDays = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
                 
                 let priority = 'low';
-                if (event.type === 'exam' && diffDays <= 7) priority = 'high';
-                else if (event.type === 'assignment' && diffDays <= 3) priority = 'high';
+                if (event.type === 'prova' && diffDays <= 7) priority = 'high';
+                else if (event.type === 'trabalho' && diffDays <= 3) priority = 'high';
                 else if (diffDays <= 1) priority = 'high';
                 else if (diffDays <= 7) priority = 'medium';
                 

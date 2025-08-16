@@ -233,9 +233,9 @@ export const useEvents = () => {
       return eventDate >= startOfWeek && eventDate <= endOfWeek;
     });
 
-    const exams = events.filter(event => event.type === 'exam');
-    const assignments = events.filter(event => event.type === 'assignment');
-    const visits = events.filter(event => event.type === 'visit');
+    const exams = events.filter(event => event.type === 'prova');
+    const assignments = events.filter(event => event.type === 'trabalho');
+    const visits = events.filter(event => event.type === 'aula');
 
     return {
       thisWeek: thisWeekEvents.length,
