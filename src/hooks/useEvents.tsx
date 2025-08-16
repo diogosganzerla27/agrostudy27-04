@@ -16,6 +16,7 @@ export interface Event {
   created_at: string;
   updated_at: string;
   source: string;
+  priority?: string;
   reminders_min_before?: number[];
 }
 
@@ -81,6 +82,7 @@ export const useEvents = () => {
     type: string;
     location?: string;
     subject_id?: string;
+    priority?: string;
     reminders_min_before?: number[];
   }) => {
     if (!user) return null;
@@ -98,6 +100,7 @@ export const useEvents = () => {
           subject_id: eventData.subject_id,
           user_id: user.id,
           source: 'manual',
+          priority: eventData.priority,
           reminders_min_before: eventData.reminders_min_before || [15, 60]
         })
         .select(`

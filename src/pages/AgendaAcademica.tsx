@@ -56,7 +56,8 @@ const AgendaAcademica = () => {
       description: newEvent.description,
       starts_at: startsAt,
       type: newEvent.type,
-      subject_id: newEvent.subject_id || undefined
+      subject_id: newEvent.subject_id || undefined,
+      priority: newEvent.priority
     };
 
     const createdEvent = await createEvent(eventData);
@@ -317,10 +318,10 @@ const AgendaAcademica = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {events.map(event => {
-                      const IconComponent = getEventIcon(event.type);
-                      const priority = getEventPriority(event);
-                      const priorityBadge = getPriorityBadge(priority);
+                     {events.map(event => {
+                       const IconComponent = getEventIcon(event.type);
+                       const priority = event.priority || getEventPriority(event);
+                       const priorityBadge = getPriorityBadge(priority);
                       
                       return (
                         <div key={event.id} className={`p-3 sm:p-4 border rounded-lg ${getEventColor(priority)}`}>
