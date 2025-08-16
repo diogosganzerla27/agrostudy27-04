@@ -48,7 +48,7 @@ const AgendaAcademica = () => {
       return;
     }
 
-    // Combinar data e hora para o formato datetime
+    // Manter horário local sem conversão de fuso horário
     const startsAt = `${newEvent.date}T${newEvent.time}:00`;
 
     const eventData = {
@@ -336,10 +336,18 @@ const AgendaAcademica = () => {
                                     <Calendar className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
                                     {new Date(event.starts_at).toLocaleDateString('pt-BR')}
                                   </span>
-                                  <span className="flex items-center">
-                                    <Clock className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
-                                    {new Date(event.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                  </span>
+                                   <span className="flex items-center">
+                                     <Clock className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
+                                     {(() => {
+                                       const eventDate = new Date(event.starts_at);
+                                       // Se a data não tem informação de timezone, tratá-la como local
+                                       if (!event.starts_at.includes('Z') && !event.starts_at.includes('+')) {
+                                         const [datePart, timePart] = event.starts_at.split('T');
+                                         return timePart?.substring(0, 5) || '';
+                                       }
+                                       return eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                                     })()}
+                                   </span>
                                   {event.subject && (
                                     <Badge variant="outline" className="text-xs w-fit">{event.subject.name}</Badge>
                                   )}
