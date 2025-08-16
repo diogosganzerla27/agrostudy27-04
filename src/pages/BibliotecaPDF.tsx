@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { FileText, Upload, Search, Filter, Download, Eye, Trash2, Star, ArrowLeft } from "lucide-react";
+import { FileText, Upload, Search, Filter, Download, Eye, Trash2, Star, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { usePdfLibrary } from "@/hooks/usePdfLibrary";
 
 const BibliotecaPDF = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -21,82 +22,33 @@ const BibliotecaPDF = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [viewPdfDialogOpen, setViewPdfDialogOpen] = useState(false);
   const [viewingPdf, setViewingPdf] = useState<any>(null);
-  const [deletePdfId, setDeletePdfId] = useState<number | null>(null);
+  const [deletePdfId, setDeletePdfId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     author: "",
     discipline: "",
-    tags: ""
+    tags: "",
+    description: ""
   });
-  const [pdfs, setPdfs] = useState([
-    {
-      id: 1,
-      title: "Manual de Fitotecnia",
-      author: "Prof. João Silva",
-      category: "Fitotecnia",
-      size: "2.4 MB",
-      pages: 124,
-      uploadDate: "2024-11-10",
-      favorite: true,
-      description: "Guia completo sobre manejo integrado de culturas",
-      tags: ["manejo", "culturas", "produção"]
-    },
-    {
-      id: 2,
-      title: "Análise de Solos - Métodos e Interpretação",
-      author: "Dr. Maria Santos",
-      category: "Solos",
-      size: "1.8 MB",
-      pages: 89,
-      uploadDate: "2024-11-08",
-      favorite: false,
-      description: "Métodos analíticos para caracterização físico-química",
-      tags: ["análise", "química", "física"]
-    },
-    {
-      id: 3,
-      title: "Sistemas Agroflorestais Sustentáveis",
-      author: "Instituto Agroecológico",
-      category: "Agroecologia",
-      size: "3.1 MB",
-      pages: 156,
-      uploadDate: "2024-11-05",
-      favorite: true,
-      description: "Implementação e manejo de SAFs",
-      tags: ["sustentabilidade", "floresta", "integração"]
-    },
-    {
-      id: 4,
-      title: "Controle Biológico de Pragas",
-      author: "Embrapa",
-      category: "Entomologia",
-      size: "2.7 MB",
-      pages: 98,
-      uploadDate: "2024-11-02",
-      favorite: false,
-      description: "Estratégias de controle natural de pragas agrícolas",
-      tags: ["controle-biológico", "pragas", "natural"]
-    },
-    {
-      id: 5,
-      title: "Nutrição Animal em Pastagens",
-      author: "Prof. Carlos Mendes",
-      category: "Zootecnia",
-      size: "2.2 MB",
-      pages: 112,
-      uploadDate: "2024-10-28",
-      favorite: false,
-      description: "Manejo nutricional de bovinos em sistemas pastoris",
-      tags: ["nutrição", "pastagem", "bovinos"]
-    }
-  ]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { 
+    pdfs, 
+    loading, 
+    stats, 
+    uploadPdf, 
+    deletePdf, 
+    toggleFavorite, 
+    downloadPdf, 
+    getPdfUrl, 
+    getCategories 
+  } = usePdfLibrary();
 
 
-  const categories = ["all", "Fitotecnia", "Solos", "Agroecologia", "Entomologia", "Zootecnia"];
+  const categories = getCategories();
 
   const handleFileSelect = () => {
     fileInputRef.current?.click();
@@ -124,7 +76,7 @@ const BibliotecaPDF = () => {
     }
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!selectedFile || !formData.title || !formData.author || !formData.discipline) {
       toast({
         title: "Erro",
@@ -134,30 +86,25 @@ const BibliotecaPDF = () => {
       return;
     }
 
-    const newPdf = {
-      id: Math.max(...pdfs.map(p => p.id), 0) + 1,
-      title: formData.title,
-      author: formData.author,
-      category: formData.discipline,
-      size: `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`,
-      pages: Math.floor(Math.random() * 200) + 50, // Simulated page count
-      uploadDate: new Date().toISOString().split('T')[0],
-      favorite: false,
-      description: `Material de estudo sobre ${formData.discipline.toLowerCase()}`,
-      tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : []
-    };
-
-    setPdfs(prev => [newPdf, ...prev]);
-    
-    // Reset form
-    setSelectedFile(null);
-    setFormData({ title: "", author: "", discipline: "", tags: "" });
-    setUploadDialogOpen(false);
-    
-    toast({
-      title: "Sucesso",
-      description: "PDF enviado com sucesso!"
-    });
+    setUploading(true);
+    try {
+      await uploadPdf(selectedFile, {
+        title: formData.title,
+        author: formData.author,
+        category: formData.discipline,
+        tags: formData.tags,
+        description: formData.description
+      });
+      
+      // Reset form
+      setSelectedFile(null);
+      setFormData({ title: "", author: "", discipline: "", tags: "", description: "" });
+      setUploadDialogOpen(false);
+    } catch (error) {
+      // Error handled in hook
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleViewPdf = (pdf: any) => {
@@ -166,67 +113,39 @@ const BibliotecaPDF = () => {
   };
 
   const handleDownloadPdf = (pdf: any) => {
-    // Simulate PDF download
-    const element = document.createElement("a");
-    const file = new Blob(
-      ["This is a simulated PDF content for: " + pdf.title],
-      { type: "application/pdf" }
-    );
-    element.href = URL.createObjectURL(file);
-    element.download = `${pdf.title}.pdf`;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-    
-    toast({
-      title: "Download iniciado",
-      description: `${pdf.title} está sendo baixado`
-    });
+    downloadPdf(pdf);
   };
 
-  const handleDeletePdf = (pdfId: number) => {
-    setPdfs(prev => prev.filter(pdf => pdf.id !== pdfId));
+  const handleDeletePdf = async (pdfId: string) => {
+    await deletePdf(pdfId);
     setDeletePdfId(null);
-    
-    toast({
-      title: "PDF removido",
-      description: "O arquivo foi removido da biblioteca"
-    });
   };
 
-  const handleToggleFavorite = (pdfId: number) => {
-    setPdfs(prev => prev.map(pdf => 
-      pdf.id === pdfId 
-        ? { ...pdf, favorite: !pdf.favorite }
-        : pdf
-    ));
-    
-    const pdf = pdfs.find(p => p.id === pdfId);
-    if (pdf) {
-      toast({
-        title: pdf.favorite ? "Removido dos favoritos" : "Adicionado aos favoritos",
-        description: pdf.title
-      });
-    }
+  const handleToggleFavorite = (pdfId: string) => {
+    toggleFavorite(pdfId);
   };
 
   const filteredPDFs = pdfs.filter(pdf => {
     const matchesSearch = pdf.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          pdf.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         pdf.description.toLowerCase().includes(searchTerm.toLowerCase());
+                         (pdf.description?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
     const matchesCategory = selectedCategory === "all" || pdf.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'Fitotecnia': return 'bg-agro-green';
-      case 'Solos': return 'bg-agro-earth';
-      case 'Agroecologia': return 'bg-agro-field';
-      case 'Entomologia': return 'bg-agro-sky';
-      case 'Zootecnia': return 'bg-orange-500';
-      default: return 'bg-gray-500';
+  const formatFileSize = (bytes: number): string => {
+    const mb = bytes / (1024 * 1024);
+    if (mb >= 1024) {
+      return `${(mb / 1024).toFixed(1)} GB`;
     }
+    return `${mb.toFixed(1)} MB`;
+  };
+
+  const getCategoryColor = (category: string) => {
+    // Use a hash-based color assignment for consistent colors
+    const colors = ['bg-agro-green', 'bg-agro-earth', 'bg-agro-field', 'bg-agro-sky', 'bg-orange-500', 'bg-purple-500', 'bg-blue-500'];
+    const hash = category.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+    return colors[hash % colors.length];
   };
 
   return (
@@ -344,12 +263,18 @@ const BibliotecaPDF = () => {
                       value={formData.tags}
                       onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
                     />
+                    <Input 
+                      placeholder="Descrição (opcional)" 
+                      value={formData.description}
+                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    />
                     <Button 
                       className="w-full" 
                       onClick={handleUpload}
-                      disabled={!selectedFile || !formData.title || !formData.author || !formData.discipline}
+                      disabled={!selectedFile || !formData.title || !formData.author || !formData.discipline || uploading}
                     >
-                      Fazer Upload
+                      {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {uploading ? "Enviando..." : "Fazer Upload"}
                     </Button>
                   </div>
                 </DialogContent>
@@ -363,7 +288,7 @@ const BibliotecaPDF = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">Total de PDFs</p>
-                      <p className="text-2xl font-bold text-agro-green">43</p>
+                      <p className="text-2xl font-bold text-agro-green">{stats.totalPdfs}</p>
                     </div>
                     <FileText className="h-8 w-8 text-agro-green" />
                   </div>
@@ -374,7 +299,7 @@ const BibliotecaPDF = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">Favoritos</p>
-                      <p className="text-2xl font-bold text-yellow-500">12</p>
+                      <p className="text-2xl font-bold text-yellow-500">{stats.favorites}</p>
                     </div>
                     <Star className="h-8 w-8 text-yellow-500" />
                   </div>
@@ -385,7 +310,7 @@ const BibliotecaPDF = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">Armazenamento</p>
-                      <p className="text-2xl font-bold text-agro-sky">2.1 GB</p>
+                      <p className="text-2xl font-bold text-agro-sky">{stats.totalSize}</p>
                     </div>
                     <Upload className="h-8 w-8 text-agro-sky" />
                   </div>
@@ -396,7 +321,7 @@ const BibliotecaPDF = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">Este Mês</p>
-                      <p className="text-2xl font-bold text-agro-earth">8</p>
+                      <p className="text-2xl font-bold text-agro-earth">{stats.thisMonth}</p>
                     </div>
                     <Upload className="h-8 w-8 text-agro-earth" />
                   </div>
@@ -430,201 +355,164 @@ const BibliotecaPDF = () => {
             </div>
 
             {/* PDF Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredPDFs.map(pdf => (
-                <Card key={pdf.id} className="hover:shadow-md transition-all">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-2">
-                        <FileText className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
-                        <div className="min-w-0">
-                          <CardTitle className="text-base leading-tight line-clamp-2">{pdf.title}</CardTitle>
-                          <p className="text-xs text-muted-foreground mt-1">{pdf.author}</p>
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredPDFs.map(pdf => (
+                  <Card key={pdf.id} className="hover:shadow-md transition-all">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-2">
+                          <FileText className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <CardTitle className="text-base leading-tight line-clamp-2">{pdf.title}</CardTitle>
+                            <p className="text-xs text-muted-foreground mt-1">{pdf.author}</p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="p-1 h-auto"
+                          onClick={() => handleToggleFavorite(pdf.id)}
+                        >
+                          <Star 
+                            className={`h-4 w-4 ${pdf.favorite ? 'fill-yellow-400 text-yellow-400' : 'text-gray-400'}`} 
+                          />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground line-clamp-2">{pdf.description}</p>
+                        
+                        <div className="flex flex-wrap gap-1">
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${getCategoryColor(pdf.category)} text-white border-none`}
+                          >
+                            {pdf.category}
+                          </Badge>
+                          {pdf.tags.slice(0, 2).map((tag, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                          {pdf.tags.length > 2 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{pdf.tags.length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>{formatFileSize(pdf.file_size)}</span>
+                          <span>{new Date(pdf.created_at).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => handleViewPdf(pdf)}
+                          >
+                            <Eye className="mr-1 h-3 w-3" />
+                            Ver
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => handleDownloadPdf(pdf)}
+                          >
+                            <Download className="mr-1 h-3 w-3" />
+                            Baixar
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm" className="px-2">
+                                <Trash2 className="h-3 w-3 text-red-500" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir "{pdf.title}"? Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeletePdf(pdf.id)}
+                                  className="bg-red-500 hover:bg-red-600"
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`p-1 ${pdf.favorite ? 'text-yellow-500' : 'text-muted-foreground'}`}
-                        onClick={() => handleToggleFavorite(pdf.id)}
-                      >
-                        <Star className="h-4 w-4" fill={pdf.favorite ? 'currentColor' : 'none'} />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Badge variant="secondary" className={`text-xs ${getCategoryColor(pdf.category)} text-white`}>
-                          {pdf.category}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">{pdf.uploadDate}</span>
-                      </div>
-                      
-                      <p className="text-sm text-muted-foreground line-clamp-2">{pdf.description}</p>
-                      
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{pdf.size}</span>
-                        <span>{pdf.pages} páginas</span>
-                      </div>
-                      
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {pdf.tags.slice(0, 2).map(tag => (
-                          <Badge key={tag} variant="outline" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                        {pdf.tags.length > 2 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{pdf.tags.length - 2}
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      <div className="flex space-x-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="flex-1"
-                          onClick={() => handleViewPdf(pdf)}
-                        >
-                          <Eye className="mr-1 h-3 w-3" />
-                          Ver
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="flex-1"
-                          onClick={() => handleDownloadPdf(pdf)}
-                        >
-                          <Download className="mr-1 h-3 w-3" />
-                          Baixar
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tem certeza que deseja excluir "{pdf.title}"? Esta ação não pode ser desfeita.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction 
-                                onClick={() => handleDeletePdf(pdf.id)}
-                                className="bg-red-600 hover:bg-red-700"
-                              >
-                                Excluir
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {filteredPDFs.length === 0 && (
-              <div className="text-center py-12">
-                <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">Nenhum PDF encontrado</h3>
-                <p className="text-muted-foreground">
-                  {searchTerm || selectedCategory !== "all" 
-                    ? "Tente ajustar seus filtros de busca" 
-                    : "Comece enviando seu primeiro PDF"
-                  }
-                </p>
+                    </CardContent>
+                  </Card>
+                ))}
+                
+                {filteredPDFs.length === 0 && (
+                  <div className="col-span-full text-center py-12">
+                    <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                      Nenhum PDF encontrado
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {searchTerm || selectedCategory !== "all" 
+                        ? "Tente alterar os filtros de busca" 
+                        : "Faça upload do seu primeiro PDF para começar"
+                      }
+                    </p>
+                  </div>
+                )}
               </div>
             )}
+
+            {/* PDF Viewer Dialog */}
+            <Dialog open={viewPdfDialogOpen} onOpenChange={setViewPdfDialogOpen}>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center">
+                    <FileText className="mr-2 h-5 w-5 text-red-500" />
+                    {viewingPdf?.title}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="flex-1 bg-gray-100 rounded-lg overflow-hidden min-h-[500px]">
+                  {viewingPdf && (
+                    <iframe
+                      src={getPdfUrl(viewingPdf)}
+                      className="w-full h-full min-h-[500px]"
+                      title={viewingPdf.title}
+                    />
+                  )}
+                </div>
+                <div className="flex gap-2 justify-end pt-4">
+                  <Button onClick={() => handleDownloadPdf(viewingPdf)}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Baixar PDF
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setViewPdfDialogOpen(false)}
+                  >
+                    Fechar
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </main>
       </div>
-
-      {/* PDF Viewer Modal */}
-      <Dialog open={viewPdfDialogOpen} onOpenChange={setViewPdfDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] p-0">
-          <DialogHeader className="p-6 pb-0">
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-red-500" />
-              {viewingPdf?.title}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="p-6 pt-4">
-            {viewingPdf && (
-              <div className="space-y-4">
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="font-medium text-muted-foreground">Autor</p>
-                      <p>{viewingPdf.author}</p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-muted-foreground">Disciplina</p>
-                      <p>{viewingPdf.category}</p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-muted-foreground">Páginas</p>
-                      <p>{viewingPdf.pages} páginas</p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-muted-foreground">Tamanho</p>
-                      <p>{viewingPdf.size}</p>
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <p className="font-medium text-muted-foreground mb-2">Descrição</p>
-                    <p className="text-sm">{viewingPdf.description}</p>
-                  </div>
-                  {viewingPdf.tags && viewingPdf.tags.length > 0 && (
-                    <div className="mt-4">
-                      <p className="font-medium text-muted-foreground mb-2">Tags</p>
-                      <div className="flex flex-wrap gap-1">
-                        {viewingPdf.tags.map((tag: string) => (
-                          <Badge key={tag} variant="outline" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="bg-gray-100 rounded-lg p-8 text-center">
-                  <FileText className="mx-auto h-16 w-16 text-red-500 mb-4" />
-                  <p className="text-lg font-medium mb-2">Visualização do PDF</p>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Em um ambiente real, o PDF seria exibido aqui usando um visualizador integrado.
-                  </p>
-                  <div className="flex justify-center gap-2">
-                    <Button 
-                      onClick={() => handleDownloadPdf(viewingPdf)}
-                      variant="outline"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Baixar PDF
-                    </Button>
-                    <Button 
-                      onClick={() => handleToggleFavorite(viewingPdf.id)}
-                      variant="outline"
-                      className={viewingPdf.favorite ? 'text-yellow-500' : ''}
-                    >
-                      <Star className="h-4 w-4 mr-2" fill={viewingPdf.favorite ? 'currentColor' : 'none'} />
-                      {viewingPdf.favorite ? 'Remover favorito' : 'Favoritar'}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

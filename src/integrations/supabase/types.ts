@@ -194,6 +194,57 @@ export type Database = {
           },
         ]
       }
+      pdf_library: {
+        Row: {
+          author: string
+          category: string
+          created_at: string
+          description: string | null
+          favorite: boolean | null
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          author: string
+          category: string
+          created_at?: string
+          description?: string | null
+          favorite?: boolean | null
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type?: string
+          id?: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          author?: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          favorite?: boolean | null
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       semesters: {
         Row: {
           created_at: string
