@@ -1,48 +1,27 @@
-import { FileText, Image, Download, Calendar, Tag, BookOpen, X } from "lucide-react";
+import { FileText, Image, Download, Calendar, Tag, BookOpen, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-interface Note {
-  id: number;
-  title: string;
-  discipline: string;
-  content: string;
-  tags: string[];
-  date: string;
-  color: string;
-  files?: File[];
-}
+import { NoteWithSubject } from "@/hooks/useNotes";
 
 interface ViewNoteDialogProps {
-  note: Note | null;
+  note: NoteWithSubject | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDelete?: (noteId: string) => void;
 }
 
-export const ViewNoteDialog = ({ note, open, onOpenChange }: ViewNoteDialogProps) => {
+export const ViewNoteDialog = ({ note, open, onOpenChange, onDelete }: ViewNoteDialogProps) => {
   if (!note) return null;
 
-  const handleDownloadFile = (file: File) => {
-    const url = URL.createObjectURL(file);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const getFileIcon = (file: File) => {
-    if (file.type.startsWith('image/')) {
-      return <Image className="h-4 w-4" />;
+  const handleDelete = () => {
+    if (onDelete) {
+      onDelete(note.id);
+      onOpenChange(false);
     }
-    return <FileText className="h-4 w-4" />;
   };
-
-  const isImage = (file: File) => file.type.startsWith('image/');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -54,15 +33,52 @@ export const ViewNoteDialog = ({ note, open, onOpenChange }: ViewNoteDialogProps
               <div className="flex items-center gap-4 mt-2 flex-wrap">
                 <div className="flex items-center gap-2">
                   <BookOpen className="h-4 w-4 text-muted-foreground" />
-                  <Badge variant="secondary">{note.discipline}</Badge>
+                  <Badge variant="secondary">{note.subject?.name || 'Sem disciplina'}</Badge>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">{note.date}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {new Date(note.created_at).toLocaleDateString('pt-BR')}
+                  </span>
                 </div>
               </div>
             </div>
-            <div className={`w-6 h-6 rounded-full ${note.color} flex-shrink-0`}></div>
+            <div className="flex items-center gap-2">
+              <div 
+                className="w-6 h-6 rounded-full flex-shrink-0"
+                style={{ backgroundColor: note.subject?.color || '#22c55e' }}
+              ></div>
+              {onDelete && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir Anotação</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja excluir a anotação "{note.title}"? Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDelete}
+                        className="bg-red-500 hover:bg-red-600"
+                      >
+                        Excluir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
           </div>
         </DialogHeader>
 
@@ -72,70 +88,22 @@ export const ViewNoteDialog = ({ note, open, onOpenChange }: ViewNoteDialogProps
             <div className="space-y-3">
               <h3 className="font-semibold text-lg">Conteúdo</h3>
               <div className="prose prose-sm max-w-none">
-                <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{note.content}</p>
+                <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                  {note.content_md || 'Sem conteúdo'}
+                </p>
               </div>
             </div>
 
             {/* Tags */}
-            {note.tags.length > 0 && (
+            {note.tags && note.tags.length > 0 && (
               <div className="space-y-3">
                 <h3 className="font-semibold text-lg">Tags</h3>
                 <div className="flex flex-wrap gap-2">
-                  {note.tags.map(tag => (
-                    <Badge key={tag} variant="outline" className="text-xs px-2 py-1 rounded-full">
+                  {note.tags.map((tag, index) => (
+                    <Badge key={index} variant="outline" className="text-xs px-2 py-1 rounded-full">
                       <Tag className="mr-1 h-3 w-3" />
                       {tag}
                     </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Files */}
-            {note.files && note.files.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-semibold text-lg">Arquivos Anexados</h3>
-                <div className="space-y-3">
-                  {note.files.map((file, index) => (
-                    <div key={index} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          {getFileIcon(file)}
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium truncate">{file.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDownloadFile(file)}
-                          className="flex-shrink-0"
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Download
-                        </Button>
-                      </div>
-                      
-                      {/* Preview for images */}
-                      {isImage(file) && (
-                        <div className="mt-3">
-                          <img
-                            src={URL.createObjectURL(file)}
-                            alt={file.name}
-                            className="max-w-full h-auto max-h-64 rounded-md border"
-                            onLoad={(e) => {
-                              // Clean up object URL after image loads
-                              setTimeout(() => {
-                                URL.revokeObjectURL((e.target as HTMLImageElement).src);
-                              }, 1000);
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
                   ))}
                 </div>
               </div>

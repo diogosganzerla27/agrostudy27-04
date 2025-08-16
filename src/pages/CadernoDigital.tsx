@@ -17,7 +17,7 @@ import { Loader2 } from "lucide-react";
 const CadernoDigital = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { notes, loading, createNote } = useNotes();
+  const { notes, loading, createNote, deleteNote } = useNotes();
   const { subjects } = useSubjects();
   
   const [searchTerm, setSearchTerm] = useState("");
@@ -75,6 +75,15 @@ const CadernoDigital = () => {
   const handleViewNote = (note: any) => {
     setSelectedNote(note);
     setIsViewDialogOpen(true);
+  };
+
+  // Função para excluir anotação
+  const handleDeleteNote = async (noteId: string) => {
+    const success = await deleteNote(noteId);
+    if (success) {
+      setIsViewDialogOpen(false);
+      setSelectedNote(null);
+    }
   };
 
   // Função para voltar
@@ -262,6 +271,7 @@ const CadernoDigital = () => {
           note={selectedNote}
           open={isViewDialogOpen}
           onOpenChange={setIsViewDialogOpen}
+          onDelete={handleDeleteNote}
         />
 
         {filteredNotes.length === 0 && <div className="text-center py-12 px-4">
