@@ -206,6 +206,21 @@ export const useSubjects = () => {
     }
   };
 
+  // Função para permitir adicionar disciplinas após setup
+  const addNewSubject = async (name: string, code: string, color: string, semesterId: string) => {
+    return await createSubject(name, code, color, semesterId);
+  };
+
+  // Função para obter disciplinas organizadas por semestre
+  const getSubjectsBySemester = () => {
+    const subjectsBySemester = semesters.map(semester => ({
+      ...semester,
+      subjects: subjects.filter(subject => subject.semester_id === semester.id)
+    }));
+    
+    return subjectsBySemester;
+  };
+
   return {
     subjects,
     semesters,
@@ -214,6 +229,8 @@ export const useSubjects = () => {
     createSubject,
     updateSubject,
     deleteSubject,
+    addNewSubject,
+    getSubjectsBySemester,
     refreshData: loadData,
   };
 };

@@ -5,9 +5,31 @@ import { StatsCard } from "./StatsCard";
 import heroImage from "@/assets/agrovita-hero.jpg";
 import studentImage from "@/assets/student-studying-plants.jpg";
 import { useNavigate } from "react-router-dom";
+import { useNotes } from "@/hooks/useNotes";
+import { useEvents } from "@/hooks/useEvents";
+import { useVisits } from "@/hooks/useVisits";
+import { useSubjects } from "@/hooks/useSubjects";
 
 export const Dashboard = () => {
   const navigate = useNavigate();
+  const { notes } = useNotes();
+  const { events } = useEvents();
+  const { visits } = useVisits();
+  const { subjects } = useSubjects();
+
+  // Calcular estatísticas reais
+  const upcomingEvents = events.filter(event => {
+    const eventDate = new Date(event.starts_at);
+    const today = new Date();
+    return eventDate >= today;
+  }).slice(0, 4);
+
+  const subjectsWithNotes = subjects.map(subject => ({
+    ...subject,
+    notesCount: notes.filter(note => note.subject_id === subject.id).length
+  })).filter(subject => subject.notesCount > 0)
+    .sort((a, b) => b.notesCount - a.notesCount)
+    .slice(0, 3);
   
   return (
     <div className="space-y-6">
@@ -91,10 +113,38 @@ export const Dashboard = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard title="Anotações Feitas" value="127" icon={BookOpen} description="+12 esta semana" variant="green" />
-        <StatsCard title="Próximos Eventos" value="5" icon={Calendar} description="3 provas este mês" variant="sky" />
-        <StatsCard title="PDFs Salvos" value="43" icon={FileText} description="2.1 GB de conteúdo" variant="earth" />
-        <StatsCard title="Visitas de Campo" value="8" icon={MapPin} description="Última: há 3 dias" variant="green" />
+        <StatsCard 
+          title="Anotações Feitas" 
+          value={notes.length.toString()} 
+          icon={BookOpen} 
+          description={`${notes.filter(note => {
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            return new Date(note.created_at) >= weekAgo;
+          }).length} esta semana`} 
+          variant="green" 
+        />
+        <StatsCard 
+          title="Próximos Eventos" 
+          value={upcomingEvents.length.toString()} 
+          icon={Calendar} 
+          description={`${events.filter(e => e.type === 'exam').length} provas total`} 
+          variant="sky" 
+        />
+        <StatsCard 
+          title="Disciplinas Ativas" 
+          value={subjects.length.toString()} 
+          icon={FileText} 
+          description={`${subjectsWithNotes.length} com anotações`} 
+          variant="earth" 
+        />
+        <StatsCard 
+          title="Visitas de Campo" 
+          value={visits.length.toString()} 
+          icon={MapPin} 
+          description={visits.length > 0 ? `Última: ${new Date(visits[0]?.date || '').toLocaleDateString('pt-BR')}` : 'Nenhuma ainda'} 
+          variant="green" 
+        />
       </div>
 
       {/* Próximas Atividades */}
@@ -108,43 +158,39 @@ export const Dashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3 sm:space-y-4">
-            {[
-              {
-                activity: "Prova de Fitotecnia",
-                details: "Sexta-feira, 22/11 - 14:00h",
-                type: "exam",
-                priority: "high"
-              },
-              {
-                activity: "Entrega de Relatório - Solos",
-                details: "Segunda-feira, 25/11 - 23:59h",
-                type: "assignment",
-                priority: "medium"
-              },
-              {
-                activity: "Visita Técnica - Fazenda Experimental",
-                details: "Quarta-feira, 27/11 - 08:00h",
-                type: "visit",
-                priority: "medium"
-              },
-              {
-                activity: "Seminário de Agroecologia",
-                details: "Quinta-feira, 28/11 - 10:00h",
-                type: "seminar",
-                priority: "low"
-              }
-            ].map((item, index) => (
-              <div key={index} className="flex items-center space-x-3 p-2 sm:p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                  item.priority === 'high' ? 'bg-red-500' : 
-                  item.priority === 'medium' ? 'bg-yellow-500' : 'bg-agro-green'
-                }`}></div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{item.activity}</p>
-                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{item.details}</p>
-                </div>
+            {upcomingEvents.length === 0 ? (
+              <div className="text-center py-8">
+                <Clock className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">Nenhuma atividade próxima</p>
               </div>
-            ))}
+            ) : (
+              upcomingEvents.map((event, index) => {
+                const eventDate = new Date(event.starts_at);
+                const today = new Date();
+                const diffDays = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+                
+                let priority = 'low';
+                if (event.type === 'exam' && diffDays <= 7) priority = 'high';
+                else if (event.type === 'assignment' && diffDays <= 3) priority = 'high';
+                else if (diffDays <= 1) priority = 'high';
+                else if (diffDays <= 7) priority = 'medium';
+                
+                return (
+                  <div key={event.id} className="flex items-center space-x-3 p-2 sm:p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                      priority === 'high' ? 'bg-red-500' : 
+                      priority === 'medium' ? 'bg-yellow-500' : 'bg-agro-green'
+                    }`}></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{event.title}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                        {eventDate.toLocaleDateString('pt-BR')} - {eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </CardContent>
       </Card>
@@ -160,34 +206,22 @@ export const Dashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            {[
-              {
-                name: "Solos",
-                notes: 23,
-                progress: 75,
-                color: "bg-agro-earth"
-              },
-              {
-                name: "Fitotecnia",
-                notes: 18,
-                progress: 60,
-                color: "bg-agro-green"
-              },
-              {
-                name: "Agroecologia",
-                notes: 15,
-                progress: 45,
-                color: "bg-agro-field"
-              }
-            ].map((subject, index) => (
-              <div key={index} className="p-3 sm:p-4 border rounded-lg hover:shadow-md transition-all">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium text-sm sm:text-base">{subject.name}</h3>
-                  <div className={`w-3 h-3 rounded-full ${subject.color}`}></div>
-                </div>
-                <p className="text-xs sm:text-sm text-muted-foreground">{subject.notes} anotações</p>
+            {subjectsWithNotes.length === 0 ? (
+              <div className="col-span-full text-center py-8">
+                <Sprout className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">Nenhuma disciplina com anotações</p>
               </div>
-            ))}
+            ) : (
+              subjectsWithNotes.map((subject, index) => (
+                <div key={subject.id} className="p-3 sm:p-4 border rounded-lg hover:shadow-md transition-all">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-medium text-sm sm:text-base">{subject.name}</h3>
+                    <div className={`w-3 h-3 rounded-full`} style={{ backgroundColor: subject.color }}></div>
+                  </div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{subject.notesCount} anotações</p>
+                </div>
+              ))
+            )}
           </div>
         </CardContent>
       </Card>

@@ -11,9 +11,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ViewNoteDialog } from "@/components/caderno/ViewNoteDialog";
 import { FileUpload } from "@/components/caderno/FileUpload";
 import { useToast } from "@/hooks/use-toast";
+import { useNotes } from "@/hooks/useNotes";
+import { useSubjects } from "@/hooks/useSubjects";
+import { Loader2 } from "lucide-react";
 const CadernoDigital = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { notes, loading, createNote } = useNotes();
+  const { subjects } = useSubjects();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDiscipline, setSelectedDiscipline] = useState("all");
   
@@ -21,8 +27,8 @@ const CadernoDigital = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newNote, setNewNote] = useState({
     title: "",
-    discipline: "",
-    content: "",
+    subject_id: "",
+    content_md: "",
     tags: "",
     files: [] as File[]
   });
@@ -30,38 +36,10 @@ const CadernoDigital = () => {
   // Estados para visualização de anotação
   const [selectedNote, setSelectedNote] = useState<any>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [notes, setNotes] = useState([{
-    id: 1,
-    title: "Irrigação por Gotejamento",
-    discipline: "Solos",
-    content: "Técnica de irrigação localizada que permite aplicação de água diretamente na zona radicular das plantas, proporcionando maior eficiência no uso da água e redução de perdas por evaporação. Esta técnica é fundamental para a agricultura sustentável em regiões áridas e semi-áridas.",
-    tags: ["irrigação", "economia-água", "sustentabilidade"],
-    date: "2024-11-15",
-    color: "bg-agro-earth",
-    files: []
-  }, {
-    id: 2,
-    title: "Controle Biológico de Pragas",
-    discipline: "Fitotecnia",
-    content: "Uso de organismos vivos para controlar populações de pragas de forma natural e sustentável. Inclui o uso de predadores, parasitoides, patógenos e outros agentes biológicos que reduzem a necessidade de pesticidas químicos.",
-    tags: ["controle-biológico", "pragas", "sustentável"],
-    date: "2024-11-14",
-    color: "bg-agro-green",
-    files: []
-  }, {
-    id: 3,
-    title: "Princípios da Agroecologia",
-    discipline: "Agroecologia",
-    content: "Sistema agrícola que integra aspectos ecológicos, econômicos e sociais para criar sistemas alimentares sustentáveis. Baseia-se na biodiversidade, reciclagem de nutrientes e sinergias entre diferentes componentes do agroecossistema.",
-    tags: ["agroecologia", "sustentabilidade", "biodiversidade"],
-    date: "2024-11-13",
-    color: "bg-agro-field",
-    files: []
-  }]);
   
   // Função para salvar nova anotação
-  const handleSaveNote = () => {
-    if (!newNote.title.trim() || !newNote.discipline || !newNote.content.trim()) {
+  const handleSaveNote = async () => {
+    if (!newNote.title.trim() || !newNote.subject_id || !newNote.content_md.trim()) {
       toast({
         title: "Campos obrigatórios",
         description: "Preencha o título, disciplina e conteúdo",
@@ -70,34 +48,27 @@ const CadernoDigital = () => {
       return;
     }
     
-    const note = {
-      id: notes.length + 1,
+    const tagsArray = newNote.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+    
+    const createdNote = await createNote({
       title: newNote.title,
-      discipline: newNote.discipline,
-      content: newNote.content,
-      tags: newNote.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-      date: new Date().toISOString().split('T')[0],
-      color: "bg-agro-green", // Cor padrão para novas anotações
-      files: [...newNote.files] // Incluir arquivos
-    };
-    
-    setNotes([note, ...notes]);
-    
-    // Limpar formulário
-    setNewNote({
-      title: "",
-      discipline: "",
-      content: "",
-      tags: "",
-      files: []
+      subject_id: newNote.subject_id,
+      content_md: newNote.content_md,
+      tags: tagsArray
     });
     
-    setIsDialogOpen(false);
-    
-    toast({
-      title: "Anotação salva",
-      description: "Sua anotação foi salva com sucesso",
-    });
+    if (createdNote) {
+      // Limpar formulário
+      setNewNote({
+        title: "",
+        subject_id: "",
+        content_md: "",
+        tags: "",
+        files: []
+      });
+      
+      setIsDialogOpen(false);
+    }
   };
 
   // Função para abrir anotação
@@ -110,10 +81,19 @@ const CadernoDigital = () => {
   const handleGoBack = () => {
     navigate('/');
   };
-  const disciplines = ["all", "Solos", "Fitotecnia", "Agroecologia", "Entomologia", "Zootecnia"];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-agro-green" />
+      </div>
+    );
+  }
+
   const filteredNotes = notes.filter(note => {
-    const matchesSearch = note.title.toLowerCase().includes(searchTerm.toLowerCase()) || note.content.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDiscipline = selectedDiscipline === "all" || note.discipline === selectedDiscipline;
+    const matchesSearch = note.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         note.content_md.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDiscipline = selectedDiscipline === "all" || note.subject_id === selectedDiscipline;
     return matchesSearch && matchesDiscipline;
   });
   return <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
@@ -163,12 +143,16 @@ const CadernoDigital = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Disciplina</label>
-                    <Select value={newNote.discipline} onValueChange={(value) => setNewNote({...newNote, discipline: value})}>
+                    <Select value={newNote.subject_id} onValueChange={(value) => setNewNote({...newNote, subject_id: value})}>
                       <SelectTrigger className="h-11 sm:h-10">
                         <SelectValue placeholder="Selecione a disciplina" />
                       </SelectTrigger>
                       <SelectContent>
-                        {disciplines.slice(1).map(discipline => <SelectItem key={discipline} value={discipline}>{discipline}</SelectItem>)}
+                        {subjects.map(subject => (
+                          <SelectItem key={subject.id} value={subject.id}>
+                            {subject.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -178,8 +162,8 @@ const CadernoDigital = () => {
                       placeholder="Conteúdo da anotação..." 
                       rows={8} 
                       className="min-h-[120px] resize-none"
-                      value={newNote.content}
-                      onChange={(e) => setNewNote({...newNote, content: e.target.value})}
+                      value={newNote.content_md}
+                      onChange={(e) => setNewNote({...newNote, content_md: e.target.value})}
                     />
                   </div>
                   <div className="space-y-2">
@@ -201,7 +185,7 @@ const CadernoDigital = () => {
                 <Button 
                   className="w-full h-11 sm:h-10" 
                   onClick={handleSaveNote}
-                  disabled={!newNote.title.trim() || !newNote.discipline || !newNote.content.trim()}
+                  disabled={!newNote.title.trim() || !newNote.subject_id || !newNote.content_md.trim()}
                 >
                   Salvar Anotação
                 </Button>
@@ -223,7 +207,11 @@ const CadernoDigital = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas as disciplinas</SelectItem>
-              {disciplines.slice(1).map(discipline => <SelectItem key={discipline} value={discipline}>{discipline}</SelectItem>)}
+              {subjects.map(subject => (
+                <SelectItem key={subject.id} value={subject.id}>
+                  {subject.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -240,22 +228,22 @@ const CadernoDigital = () => {
                 <div className="flex items-start justify-between gap-3">
                   <CardTitle className="text-base sm:text-lg leading-tight flex-1 min-w-0">{note.title}</CardTitle>
                   <div className="flex items-center gap-2">
-                    {note.files && note.files.length > 0 && (
-                      <div className="flex items-center bg-muted rounded-full px-2 py-1">
-                        <FileText className="h-3 w-3 mr-1" />
-                        <span className="text-xs">{note.files.length}</span>
-                      </div>
-                    )}
-                    <div className={`w-4 h-4 sm:w-3 sm:h-3 rounded-full ${note.color} flex-shrink-0`}></div>
+                    <div className={`w-4 h-4 sm:w-3 sm:h-3 rounded-full ${note.subject?.color || 'bg-agro-green'} flex-shrink-0`}></div>
                   </div>
                 </div>
                 <div className="flex items-center justify-between flex-wrap gap-2 mt-2">
-                  <Badge variant="secondary" className="text-xs px-2 py-1">{note.discipline}</Badge>
-                  <span className="text-xs text-muted-foreground">{note.date}</span>
+                  <Badge variant="secondary" className="text-xs px-2 py-1">
+                    {note.subject?.name || 'Sem disciplina'}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(note.created_at).toLocaleDateString('pt-BR')}
+                  </span>
                 </div>
               </CardHeader>
               <CardContent className="p-4 sm:p-6 pt-0">
-                <p className="text-sm text-muted-foreground mb-3 line-clamp-3 leading-relaxed">{note.content}</p>
+                <p className="text-sm text-muted-foreground mb-3 line-clamp-3 leading-relaxed">
+                  {note.content_md}
+                </p>
                 <div className="flex flex-wrap gap-1.5">
                   {note.tags.map(tag => (
                     <Badge key={tag} variant="outline" className="text-xs px-2 py-1 rounded-full">
