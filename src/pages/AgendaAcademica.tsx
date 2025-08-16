@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Calendar, Clock, Plus, AlertCircle, BookOpen, FileText, ArrowLeft } from "lucide-react";
+import { Calendar, Clock, Plus, AlertCircle, BookOpen, FileText, ArrowLeft, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,12 +20,13 @@ import { Loader2 } from "lucide-react";
 const AgendaAcademica = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { events, loading, createEvent, getEventStats } = useEvents();
+  const { events, loading, createEvent, deleteEvent, getEventStats } = useEvents();
   const { subjects } = useSubjects();
   
   const [selectedMonth, setSelectedMonth] = useState("current");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<string | null>(null);
 
   const [newEvent, setNewEvent] = useState({
     title: "",
@@ -70,6 +72,13 @@ const AgendaAcademica = () => {
         description: ""
       });
       setDialogOpen(false);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    const success = await deleteEvent(eventId);
+    if (success) {
+      setEventToDelete(null);
     }
   };
 
@@ -336,9 +345,39 @@ const AgendaAcademica = () => {
                                 </div>
                               </div>
                             </div>
-                            <Badge variant={priorityBadge.variant} className="text-xs flex-shrink-0">
-                              {priorityBadge.text}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={priorityBadge.variant} className="text-xs flex-shrink-0">
+                                {priorityBadge.text}
+                              </Badge>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Excluir Evento</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Tem certeza que deseja excluir o evento "{event.title}"? Esta ação não pode ser desfeita.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDeleteEvent(event.id)}
+                                      className="bg-red-500 hover:bg-red-600"
+                                    >
+                                      Excluir
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
                           </div>
                         </div>
                       );
