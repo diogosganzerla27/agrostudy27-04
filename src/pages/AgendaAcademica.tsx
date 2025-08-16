@@ -38,14 +38,13 @@ const AgendaAcademica = () => {
   const [newEvent, setNewEvent] = useState({
     title: "",
     date: "",
-    time: "",
     type: "",
     subject_id: "",
     priority: "",
     description: ""
   });
   const handleSaveEvent = async () => {
-    if (!newEvent.title || !newEvent.date || !newEvent.time || !newEvent.type || !newEvent.priority) {
+    if (!newEvent.title || !newEvent.date || !newEvent.type || !newEvent.priority) {
       toast({
         title: "Erro",
         description: "Preencha todos os campos obrigatórios.",
@@ -54,8 +53,8 @@ const AgendaAcademica = () => {
       return;
     }
 
-    // Manter horário local sem conversão de fuso horário
-    const startsAt = `${newEvent.date}T${newEvent.time}:00`;
+    // Usar apenas a data sem horário específico
+    const startsAt = `${newEvent.date}T00:00:00`;
     const eventData = {
       title: newEvent.title,
       description: newEvent.description,
@@ -69,7 +68,6 @@ const AgendaAcademica = () => {
       setNewEvent({
         title: "",
         date: "",
-        time: "",
         type: "",
         subject_id: "",
         priority: "",
@@ -201,13 +199,10 @@ const AgendaAcademica = () => {
                     ...newEvent,
                     title: e.target.value
                   })} />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Input type="date" value={newEvent.date} onChange={e => setNewEvent({
+                    <Input type="date" value={newEvent.date} onChange={e => setNewEvent({
                       ...newEvent,
                       date: e.target.value
                     })} />
-                      
-                    </div>
                     <Select value={newEvent.type} onValueChange={value => setNewEvent({
                     ...newEvent,
                     type: value
@@ -331,24 +326,9 @@ const AgendaAcademica = () => {
                                 <h3 className="font-medium text-sm sm:text-base">{event.title}</h3>
                                 <p className="text-xs sm:text-sm opacity-75 mt-1 line-clamp-2">{event.description}</p>
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm">
-                                  <span className="flex items-center">
-                                    <Calendar className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
-                                    {new Date(event.starts_at).toLocaleDateString('pt-BR')}
-                                  </span>
                                    <span className="flex items-center">
-                                     <Clock className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
-                                     {(() => {
-                                const eventDate = new Date(event.starts_at);
-                                // Se a data não tem informação de timezone, tratá-la como local
-                                if (!event.starts_at.includes('Z') && !event.starts_at.includes('+')) {
-                                  const [datePart, timePart] = event.starts_at.split('T');
-                                  return timePart?.substring(0, 5) || '';
-                                }
-                                return eventDate.toLocaleTimeString('pt-BR', {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                });
-                              })()}
+                                     <Calendar className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
+                                     {new Date(event.starts_at).toLocaleDateString('pt-BR')}
                                    </span>
                                   {event.subject && <Badge variant="outline" className="text-xs w-fit">{event.subject.name}</Badge>}
                                 </div>
