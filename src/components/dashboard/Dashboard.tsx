@@ -1,4 +1,4 @@
-import { BookOpen, Calendar, FileText, MapPin, PlusCircle, Clock, Target, Sprout } from "lucide-react";
+import { BookOpen, Calendar, FileText, MapPin, PlusCircle, Clock, Target, Sprout, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatsCard } from "./StatsCard";
@@ -107,6 +107,44 @@ export const Dashboard = () => {
               </div>
               <p className="text-xs sm:text-sm text-muted-foreground">Artigos e materiais de estudo</p>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* AgroStudy IA Section */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center text-base sm:text-lg">
+            <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-agro-green" />
+            AgroStudy IA
+          </CardTitle>
+          <CardDescription className="text-sm">Assistente inteligente para seus estudos agrícolas</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="p-4 border rounded-lg bg-gradient-to-r from-agro-green/5 to-agro-sky/5 border-agro-green/20">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-agro-green to-agro-sky rounded-lg flex items-center justify-center">
+                  <Sparkles className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-sm sm:text-base">Assistente IA</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Tire dúvidas sobre agronomia</p>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate('/agrostudy-ia')}
+                className="bg-agro-green/10 border-agro-green/30 text-agro-green hover:bg-agro-green/20"
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                Abrir Chat
+              </Button>
+            </div>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Pergunte sobre técnicas de cultivo, manejo de pragas, irrigação e muito mais!
+            </p>
           </div>
         </CardContent>
       </Card>
