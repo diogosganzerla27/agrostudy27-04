@@ -104,30 +104,6 @@ export default function AgroStudyIA() {
         </Badge>
       </div>
 
-      {/* Sugestões rápidas */}
-      {messages.length <= 1 && (
-        <Card className="mb-4 sm:mb-6 flex-shrink-0">
-          <CardHeader className="pb-3 p-4 sm:p-6">
-            <CardTitle className="text-base sm:text-lg">Perguntas Sugeridas</CardTitle>
-            <CardDescription className="text-sm">Clique em uma pergunta para começar</CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6 pt-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-              {suggestedQuestions.map((question, index) => (
-                <Button
-                  key={index}
-                  variant="outline"
-                  className="justify-start text-left h-auto p-3 hover:bg-agro-green/5 touch-manipulation"
-                  onClick={() => setInputMessage(question)}
-                >
-                  <Bot className="w-4 h-4 mr-2 text-agro-green flex-shrink-0" />
-                  <span className="text-sm leading-relaxed">{question}</span>
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Chat Container */}
       <Card className="flex-1 flex flex-col min-h-0">
@@ -194,7 +170,7 @@ export default function AgroStudyIA() {
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Digite sua pergunta sobre agronomia..."
+              placeholder="Enviar mensagem para AgroStudyIA"
               className="flex-1 h-10 sm:h-9 text-sm sm:text-base"
               disabled={isLoading}
             />
