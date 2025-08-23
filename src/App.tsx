@@ -15,6 +15,7 @@ import Notas from "./pages/Notas";
 import Auth from "./pages/Auth";
 import Setup from "./pages/Setup";
 import AgroStudyIA from "./pages/AgroStudyIA";
+import Disciplinas from "./pages/Disciplinas";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,7 @@ const AppRoutes = () => (
       <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
       <Route path="/notas" element={<ProtectedRoute><Notas /></ProtectedRoute>} />
       <Route path="/agrostudy-ia" element={<ProtectedRoute><AgroStudyIA /></ProtectedRoute>} />
+      <Route path="/disciplinas" element={<ProtectedRoute><Disciplinas /></ProtectedRoute>} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
