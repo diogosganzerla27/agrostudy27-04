@@ -136,7 +136,7 @@ export default function Disciplinas() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate(-1)}
+                onClick={() => navigate("/")}
                 className="text-muted-foreground hover:text-foreground p-2 md:px-3"
               >
                 <ArrowLeft className="h-4 w-4 md:mr-2" />

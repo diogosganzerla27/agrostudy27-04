@@ -171,7 +171,7 @@ const AgendaAcademica = () => {
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="lg:hidden">
+                <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="lg:hidden">
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <div>

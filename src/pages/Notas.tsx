@@ -339,7 +339,7 @@ const Notas = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(-1)}
+              onClick={() => navigate("/")}
               className="hover:bg-agro-green/10 flex-shrink-0"
             >
               <ArrowLeft className="h-5 w-5" />

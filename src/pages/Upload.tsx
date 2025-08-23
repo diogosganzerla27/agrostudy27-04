@@ -228,7 +228,7 @@ const Upload = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(-1)}
+              onClick={() => navigate("/")}
               className="hover:bg-agro-green/10"
             >
               <ArrowLeft className="h-5 w-5" />
