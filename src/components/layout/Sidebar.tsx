@@ -1,4 +1,4 @@
-import { BookOpen, Calendar, FileText, MapPin, Upload, Home, GraduationCap, CloudSun, X, Sparkles, BookMarked } from "lucide-react";
+import { BookOpen, Calendar, FileText, MapPin, Upload, Home, GraduationCap, CloudSun, X, Sparkles, BookMarked, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -48,6 +48,11 @@ const menuItems = [{
   label: "Disciplinas",
   icon: BookMarked,
   route: "/disciplinas"
+}, {
+  id: "simulado",
+  label: "Simulado IA",
+  icon: Target,
+  route: "/simulado"
 }, {
   id: "agrostudy-ia",
   label: "AgroStudy IA",

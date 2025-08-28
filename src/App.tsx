@@ -16,6 +16,7 @@ import Auth from "./pages/Auth";
 import Setup from "./pages/Setup";
 import AgroStudyIA from "./pages/AgroStudyIA";
 import Disciplinas from "./pages/Disciplinas";
+import SimuladoIA from "./pages/SimuladoIA";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,7 @@ const AppRoutes = () => (
       <Route path="/notas" element={<ProtectedRoute><Notas /></ProtectedRoute>} />
       <Route path="/agrostudy-ia" element={<ProtectedRoute><AgroStudyIA /></ProtectedRoute>} />
       <Route path="/disciplinas" element={<ProtectedRoute><Disciplinas /></ProtectedRoute>} />
+      <Route path="/simulado" element={<ProtectedRoute><SimuladoIA /></ProtectedRoute>} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
