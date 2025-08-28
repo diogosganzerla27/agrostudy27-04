@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Brain, Upload, FileText, Zap, Loader2, ArrowLeft, Target, Clock, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,11 +74,12 @@ const SimuladoIA = () => {
 
     setGeneratingExam(true);
     
-    // Simular geração de prova (aqui seria a integração com IA)
+    // Simular geração de prova baseada nos PDFs selecionados
     setTimeout(() => {
       const selectedPdfObjects = pdfs.filter(pdf => selectedPdfs.includes(pdf.id));
       const subject = selectedPdfObjects[0]?.category || "Geral";
       
+      // Gerar questões baseadas nos PDFs selecionados (simulação)
       const mockQuestions: Question[] = [
         {
           id: "1",
@@ -118,6 +119,32 @@ const SimuladoIA = () => {
           correctAnswer: 1,
           difficulty: "Fácil",
           topic: "Rotação de Culturas"
+        },
+        {
+          id: "4",
+          question: "Quais são os principais nutrientes que as plantas necessitam?",
+          options: [
+            "Apenas água e luz solar",
+            "Nitrogênio, fósforo e potássio (NPK)",
+            "Somente carbono e oxigênio",
+            "Apenas minerais do solo"
+          ],
+          correctAnswer: 1,
+          difficulty: "Fácil",
+          topic: "Nutrição Vegetal"
+        },
+        {
+          id: "5",
+          question: "O que é manejo integrado de pragas (MIP)?",
+          options: [
+            "Uso exclusivo de pesticidas químicos",
+            "Estratégia que combina métodos biológicos, culturais e químicos",
+            "Eliminação total de todos os insetos",
+            "Uso apenas de métodos orgânicos"
+          ],
+          correctAnswer: 1,
+          difficulty: "Difícil",
+          topic: "Controle de Pragas"
         }
       ];
 
@@ -125,7 +152,7 @@ const SimuladoIA = () => {
         id: Date.now().toString(),
         title: `Simulado - ${subject}`,
         questions: mockQuestions,
-        duration: 30, // 30 minutos
+        duration: 45, // 45 minutos
         generatedAt: new Date().toISOString(),
         subject,
         totalQuestions: mockQuestions.length
@@ -137,7 +164,7 @@ const SimuladoIA = () => {
       
       toast({
         title: "Simulado Gerado!",
-        description: "Seu simulado foi criado com sucesso",
+        description: `Simulado criado com ${mockQuestions.length} questões baseadas nos PDFs selecionados`,
       });
     }, 3000);
   };
@@ -151,6 +178,27 @@ const SimuladoIA = () => {
     setExamCompleted(false);
     setExamResult(null);
   };
+
+  // Timer do exame
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (examInProgress && timeRemaining > 0) {
+      interval = setInterval(() => {
+        setTimeRemaining(prev => {
+          if (prev <= 1) {
+            finishExam();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [examInProgress, timeRemaining]);
 
   const submitAnswer = (questionId: string, answer: number) => {
     setAnswers(prev => ({
