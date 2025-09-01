@@ -80,6 +80,20 @@ export default function Disciplinas() {
         color: "#22c55e",
         semesterId: ""
       });
+
+      // Se estávamos editando um semestre, atualizar a lista de disciplinas do semestre
+      if (editingSemester && formData.semesterId === editingSemester.id) {
+        // Aguardar um momento para garantir que o subject foi salvo no banco
+        setTimeout(() => {
+          const updatedSubjects = subjects.filter(subject => subject.semester_id === editingSemester.id);
+          setEditingSemester({
+            ...editingSemester,
+            subjects: updatedSubjects
+          });
+          // Reabrir o diálogo de semestre
+          setShowSemesterDialog(true);
+        }, 100);
+      }
     } catch (error) {
       toast({
         title: "Erro",
@@ -575,7 +589,14 @@ export default function Disciplinas() {
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    setFormData({ ...formData, semesterId: editingSemester.id });
+                    // Resetar form e configurar semestre
+                    setEditingSubject(null);
+                    setFormData({ 
+                      name: "",
+                      code: "",
+                      color: "#22c55e",
+                      semesterId: editingSemester.id 
+                    });
                     setShowSemesterDialog(false);
                     setShowDialog(true);
                   }}
