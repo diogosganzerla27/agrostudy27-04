@@ -22,11 +22,12 @@ const colors = [
 export default function Disciplinas() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { subjects, semesters, loading, createSubject, updateSubject, deleteSubject, getSubjectsBySemester } = useSubjects();
+  const { subjects, semesters, loading, createSubject, updateSubject, deleteSubject, deleteSemester, getSubjectsBySemester } = useSubjects();
   
   const [showDialog, setShowDialog] = useState(false);
   const [editingSubject, setEditingSubject] = useState<any>(null);
   const [deleteSubjectId, setDeleteSubjectId] = useState<string | null>(null);
+  const [deleteSemesterId, setDeleteSemesterId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     code: "",
@@ -102,6 +103,21 @@ export default function Disciplinas() {
       toast({
         title: "Erro",
         description: "Não foi possível remover a disciplina",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteSemester = async () => {
+    if (!deleteSemesterId) return;
+    
+    try {
+      await deleteSemester(deleteSemesterId);
+      setDeleteSemesterId(null);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover o semestre",
         variant: "destructive",
       });
     }
@@ -184,9 +200,22 @@ export default function Disciplinas() {
                 <CardHeader className="pb-3 md:pb-6">
                   <CardTitle className="flex items-center justify-between text-base md:text-lg">
                     <span className="truncate pr-2">{semester.title}</span>
-                    <Badge variant="secondary" className="text-xs shrink-0">
-                      {semester.subjects.length} disciplina{semester.subjects.length !== 1 ? 's' : ''}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="text-xs shrink-0">
+                        {semester.subjects.length} disciplina{semester.subjects.length !== 1 ? 's' : ''}
+                      </Badge>
+                      
+                      {/* Botão de excluir semestre */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeleteSemesterId(semester.id)}
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+                        title="Excluir semestre"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
@@ -381,7 +410,7 @@ export default function Disciplinas() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Subject Confirmation Dialog */}
       <AlertDialog open={!!deleteSubjectId} onOpenChange={() => setDeleteSubjectId(null)}>
         <AlertDialogContent className="mx-4">
           <AlertDialogHeader>
@@ -398,6 +427,28 @@ export default function Disciplinas() {
               className="h-11 order-1 sm:order-2 bg-destructive hover:bg-destructive/90 transition-all"
             >
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Semester Confirmation Dialog */}
+      <AlertDialog open={!!deleteSemesterId} onOpenChange={() => setDeleteSemesterId(null)}>
+        <AlertDialogContent className="mx-4">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg">Confirmar exclusão do semestre</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm leading-relaxed">
+              Tem certeza que deseja excluir este semestre? Esta ação não pode ser desfeita. 
+              Só é possível excluir semestres que não possuem disciplinas cadastradas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <AlertDialogCancel className="h-11 order-2 sm:order-1">Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteSemester} 
+              className="h-11 order-1 sm:order-2 bg-destructive hover:bg-destructive/90 transition-all"
+            >
+              Excluir Semestre
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

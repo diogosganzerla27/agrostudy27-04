@@ -206,6 +206,48 @@ export const useSubjects = () => {
     }
   };
 
+  const deleteSemester = async (id: string) => {
+    if (!user) return false;
+
+    try {
+      // Primeiro, verificar se há disciplinas neste semestre
+      const subjectsInSemester = subjects.filter(subject => subject.semester_id === id);
+      
+      if (subjectsInSemester.length > 0) {
+        toast({
+          title: "Erro ao remover semestre",
+          description: "Não é possível remover um semestre que possui disciplinas. Remova as disciplinas primeiro.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      const { error } = await supabase
+        .from('semesters')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setSemesters(prev => prev.filter(semester => semester.id !== id));
+      toast({
+        title: "Semestre removido",
+        description: "O semestre foi removido com sucesso",
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting semester:', error);
+      toast({
+        title: "Erro ao remover semestre",
+        description: "Não foi possível remover o semestre",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   // Função para permitir adicionar disciplinas após setup
   const addNewSubject = async (name: string, code: string, color: string, semesterId: string) => {
     return await createSubject(name, code, color, semesterId);
@@ -229,6 +271,7 @@ export const useSubjects = () => {
     createSubject,
     updateSubject,
     deleteSubject,
+    deleteSemester,
     addNewSubject,
     getSubjectsBySemester,
     refreshData: loadData,
