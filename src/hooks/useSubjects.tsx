@@ -110,6 +110,47 @@ export const useSubjects = () => {
     }
   };
 
+  const updateSemester = async (id: string, title: string, startDate: string, endDate: string) => {
+    if (!user) return false;
+
+    try {
+      const { error } = await supabase
+        .from('semesters')
+        .update({
+          title,
+          start_date: startDate,
+          end_date: endDate,
+        })
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setSemesters(prev => 
+        prev.map(semester => 
+          semester.id === id 
+            ? { ...semester, title, start_date: startDate, end_date: endDate }
+            : semester
+        )
+      );
+
+      toast({
+        title: "Semestre atualizado",
+        description: `Semestre "${title}" atualizado com sucesso`,
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error updating semester:', error);
+      toast({
+        title: "Erro ao atualizar semestre",
+        description: "Não foi possível atualizar o semestre",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   const createSubject = async (name: string, code: string, color: string, semesterId: string) => {
     if (!user) return null;
 
@@ -268,6 +309,7 @@ export const useSubjects = () => {
     semesters,
     loading,
     createSemester,
+    updateSemester,
     createSubject,
     updateSubject,
     deleteSubject,

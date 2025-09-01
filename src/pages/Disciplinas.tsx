@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Plus, Trash2, Edit2, Save, X, Palette, BookOpen, MoreVertical } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Edit2, Save, X, Palette, BookOpen, MoreVertical, Calendar, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,10 +22,12 @@ const colors = [
 export default function Disciplinas() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { subjects, semesters, loading, createSubject, updateSubject, deleteSubject, deleteSemester, getSubjectsBySemester } = useSubjects();
+  const { subjects, semesters, loading, createSubject, updateSubject, deleteSubject, deleteSemester, updateSemester, getSubjectsBySemester } = useSubjects();
   
   const [showDialog, setShowDialog] = useState(false);
+  const [showSemesterDialog, setShowSemesterDialog] = useState(false);
   const [editingSubject, setEditingSubject] = useState<any>(null);
+  const [editingSemester, setEditingSemester] = useState<any>(null);
   const [deleteSubjectId, setDeleteSubjectId] = useState<string | null>(null);
   const [deleteSemesterId, setDeleteSemesterId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -33,6 +35,11 @@ export default function Disciplinas() {
     code: "",
     color: "#22c55e",
     semesterId: ""
+  });
+  const [semesterFormData, setSemesterFormData] = useState({
+    title: "",
+    startDate: "",
+    endDate: ""
   });
 
   const subjectsBySemester = getSubjectsBySemester();
@@ -123,6 +130,60 @@ export default function Disciplinas() {
     }
   };
 
+  const handleEditSemester = (semester: any) => {
+    // Buscar as disciplinas do semestre
+    const semesterWithSubjects = {
+      ...semester,
+      subjects: subjects.filter(subject => subject.semester_id === semester.id)
+    };
+    
+    setEditingSemester(semesterWithSubjects);
+    setSemesterFormData({
+      title: semester.title,
+      startDate: semester.start_date,
+      endDate: semester.end_date
+    });
+    setShowSemesterDialog(true);
+  };
+
+  const handleSemesterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!semesterFormData.title || !semesterFormData.startDate || !semesterFormData.endDate) {
+      toast({
+        title: "Erro",
+        description: "Todos os campos são obrigatórios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!editingSemester) return;
+
+    try {
+      await updateSemester(
+        editingSemester.id,
+        semesterFormData.title,
+        semesterFormData.startDate,
+        semesterFormData.endDate
+      );
+      
+      setShowSemesterDialog(false);
+      setEditingSemester(null);
+      setSemesterFormData({
+        title: "",
+        startDate: "",
+        endDate: ""
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o semestre",
+        variant: "destructive",
+      });
+    }
+  };
+
   const openNewSubjectDialog = () => {
     setEditingSubject(null);
     setFormData({
@@ -205,16 +266,27 @@ export default function Disciplinas() {
                         {semester.subjects.length} disciplina{semester.subjects.length !== 1 ? 's' : ''}
                       </Badge>
                       
-                      {/* Botão de excluir semestre */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDeleteSemesterId(semester.id)}
-                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
-                        title="Excluir semestre"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
+                      {/* Botões de ação do semestre */}
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditSemester(semester)}
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
+                          title="Editar semestre"
+                        >
+                          <Settings className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteSemesterId(semester.id)}
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+                          title="Excluir semestre"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                   </CardTitle>
                 </CardHeader>
@@ -404,6 +476,132 @@ export default function Disciplinas() {
               >
                 <Save className="h-4 w-4 mr-2" />
                 {editingSubject ? "Atualizar" : "Criar"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog for Edit Semester */}
+      <Dialog open={showSemesterDialog} onOpenChange={setShowSemesterDialog}>
+        <DialogContent className="sm:max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Editar Semestre
+            </DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={handleSemesterSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="semesterTitle" className="text-sm font-medium">Título do Semestre *</Label>
+              <Input
+                id="semesterTitle"
+                value={semesterFormData.title}
+                onChange={(e) => setSemesterFormData({ ...semesterFormData, title: e.target.value })}
+                placeholder="Ex: 2024.1, 1º Semestre 2024, etc."
+                className="h-11"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="startDate" className="text-sm font-medium">Data de Início *</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={semesterFormData.startDate}
+                  onChange={(e) => setSemesterFormData({ ...semesterFormData, startDate: e.target.value })}
+                  className="h-11"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="endDate" className="text-sm font-medium">Data de Fim *</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={semesterFormData.endDate}
+                  onChange={(e) => setSemesterFormData({ ...semesterFormData, endDate: e.target.value })}
+                  className="h-11"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Lista de disciplinas do semestre */}
+            {editingSemester && (
+              <div className="space-y-3 pt-4 border-t">
+                <Label className="text-sm font-medium">Disciplinas neste semestre</Label>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {editingSemester.subjects?.length > 0 ? (
+                    editingSemester.subjects.map((subject: any) => (
+                      <div key={subject.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: subject.color }}
+                          />
+                          <span className="text-sm font-medium">{subject.name}</span>
+                          {subject.code && (
+                            <span className="text-xs text-muted-foreground">({subject.code})</span>
+                          )}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setDeleteSubjectId(subject.id);
+                            setShowSemesterDialog(false);
+                          }}
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-2">
+                      Nenhuma disciplina cadastrada neste semestre
+                    </p>
+                  )}
+                </div>
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setFormData({ ...formData, semesterId: editingSemester.id });
+                    setShowSemesterDialog(false);
+                    setShowDialog(true);
+                  }}
+                  className="w-full"
+                >
+                  <Plus className="h-3 w-3 mr-2" />
+                  Adicionar Nova Disciplina
+                </Button>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowSemesterDialog(false)}
+                className="h-11 order-2 sm:order-1"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                className="h-11 order-1 sm:order-2 bg-primary hover:bg-primary/90 transition-all"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Atualizar Semestre
               </Button>
             </div>
           </form>
