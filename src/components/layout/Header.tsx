@@ -18,9 +18,10 @@ export const Header = ({
   } = useAuth();
   const getUserInitials = () => {
     if (user?.user_metadata?.name) {
-      return user.user_metadata.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+      // Retorna apenas a inicial do primeiro nome
+      return user.user_metadata.name.trim().charAt(0).toUpperCase();
     }
-    return user?.email?.slice(0, 2).toUpperCase() || 'U';
+    return user?.email?.charAt(0).toUpperCase() || 'U';
   };
   return <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4">
